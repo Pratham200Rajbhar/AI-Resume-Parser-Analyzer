@@ -1,0 +1,161 @@
+# ==============================================================================
+# Environment Variables & Secrets
+# ==============================================================================
+# Avoid committing sensitive configuration files and API keys
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+*.cert
+*.crt
+
+# ==============================================================================
+# Node / Frontend (Next.js)
+# ==============================================================================
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Next.js build output, export, and production folders
+.next/
+**/.next/
+out/
+**/out/
+build/
+**/build/
+.vercel
+**/.vercel
+.npm
+**/.npm
+
+# Package manager log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Compilation and builder caches
+.turbo/
+**/.turbo/
+.eslintcache
+**/.eslintcache
+
+# ==============================================================================
+# Python Backend
+# ==============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+**/.venv/
+venv/
+**/venv/
+env/
+**/env/
+ENV/
+**/ENV/
+
+# Python packaging, builds, and distribution
+dist/
+**/dist/
+build/
+**/build/
+*.egg-info/
+**/*.egg-info/
+.eggs/
+**/.eggs/
+
+# Linting, formatting, testing, and coverage caches
+.ruff_cache/
+**/.ruff_cache/
+.pytest_cache/
+**/.pytest_cache/
+.mypy_cache/
+**/.mypy_cache/
+.tox/
+**/.tox/
+.coverage
+**/.coverage
+htmlcov/
+**/htmlcov/
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ==============================================================================
+# Databases & Prisma
+# ==============================================================================
+# Local database engines and log/transaction files
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
+*.sqlite3
+*.sqlite3-journal
+
+# ==============================================================================
+# Machine Learning Models & Large Binary Artifacts
+# ==============================================================================
+# Ignore massive binary weight files, serialization archives, and model artifacts
+*.safetensors
+*.bin
+*.h5
+*.onnx
+*.pt
+*.pth
+*.pkl
+*.joblib
+**/*.safetensors
+**/*.bin
+**/*.h5
+**/*.onnx
+**/*.pt
+**/*.pth
+**/*.pkl
+**/*.joblib
+
+# ==============================================================================
+# Local Storage / Uploads
+# ==============================================================================
+# Ignore all uploaded files but preserve the directory structures
+uploads/*
+!uploads/.gitkeep
+
+# ==============================================================================
+# IDE, Editor, & System Files
+# ==============================================================================
+# VS Code project settings (allow sharing extensions/launch configs if desired)
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+
+# JetBrains IDEs (PyCharm, WebStorm, etc.)
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Text editor swap/temporary files
+*~
+*.swp
+*.tmp
+*.bak
+
+# ==============================================================================
+# Claude / Agent Workspace Directories
+# ==============================================================================
+# Ignore directories created by AI agents or local assistant cache
+.claude/
+.gemini/

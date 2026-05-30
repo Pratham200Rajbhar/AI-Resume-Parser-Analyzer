@@ -1,0 +1,132 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider             = "prisma-client-py"
+  interface            = "asyncio"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  fullName  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resumes          Resume[]
+  batches          BatchJob[]
+  sessions         CoachingSession[]
+  jobDescriptions  JobDescription[]
+}
+
+model Resume {
+  id        String       @id @default(uuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName  String
+  filePath  String
+  fileType  String
+  fileSize  Int
+  fileHash  String
+  status    UploadStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  analysis     ResumeAnalysis?
+  matchResults JdMatchResult[]
+
+  @@index([userId])
+  @@index([fileHash])
+}
+
+model ResumeAnalysis {
+  id            String   @id @default(uuid())
+  resumeId      String   @unique
+  resume        Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  rawText       String
+  entitiesJson  Json
+  atsScore      Int
+  atsBreakdown  Json
+  biasFlagsJson Json
+  fraudFlagsJson Json    @default("[]")
+  createdAt     DateTime @default(now())
+}
+
+model JobDescription {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  company         String?
+  rawText         String
+  embeddingVector Float[]
+  createdAt       DateTime @default(now())
+
+  matchResults JdMatchResult[]
+
+  @@index([userId])
+}
+
+model JdMatchResult {
+  id               String         @id @default(uuid())
+  resumeId         String
+  resume           Resume         @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  jobDescriptionId String
+  jobDescription   JobDescription @relation(fields: [jobDescriptionId], references: [id], onDelete: Cascade)
+  matchScore       Float
+  matchedSkills    Json
+  gapSkills        Json
+  keywordReport    Json           @default("{}")
+  createdAt        DateTime       @default(now())
+
+  @@unique([resumeId, jobDescriptionId])
+  @@index([resumeId])
+  @@index([jobDescriptionId])
+}
+
+model BatchJob {
+  id             String      @id @default(uuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobDescriptionId String?
+  totalCount     Int
+  completedCount Int         @default(0)
+  failedCount    Int         @default(0)
+  status         BatchStatus @default(IN_PROGRESS)
+  rankedResults  Json?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([userId])
+}
+
+model CoachingSession {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeAnalysisId String?
+  jobDescriptionId String?
+  title            String   @default("New Session")
+  messages         Json     @default("[]")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId])
+}
+
+enum UploadStatus {
+  PENDING
+  PARSING
+  ANALYZING
+  ANALYZED
+  FAILED
+}
+
+enum BatchStatus {
+  IN_PROGRESS
+  COMPLETE
+  FAILED
+}
