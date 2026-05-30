@@ -101,6 +101,14 @@ class CareerCoach:
                     temperature=0.7,
                     max_tokens=1500,
                 )
+            elif provider == "ollama":
+                from langchain_ollama import ChatOllama  # noqa: PLC0415
+
+                self._llm = ChatOllama(
+                    model=model,
+                    base_url=self._settings.ollama_base_url,
+                    temperature=0.7,
+                )
             else:
                 raise ValueError(f"Unknown LLM provider: {provider}")
 

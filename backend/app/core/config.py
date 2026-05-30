@@ -47,8 +47,9 @@ class Settings(BaseSettings):
     # LLM
     openai_api_key: str = ""
     anthropic_api_key: str = ""
-    llm_provider: Literal["openai", "anthropic"] = "openai"
+    llm_provider: Literal["openai", "anthropic", "ollama"] = "openai"
     llm_model: str = "gpt-4o"
+    ollama_base_url: str = "http://localhost:11434"
 
     # Celery
     celery_broker_url: str = "redis://localhost:6379/1"
