@@ -57,7 +57,7 @@ export function useResumeUpload() {
           setJobEvent(event)
           setJobProgress(jobId, event)
 
-          if (event.event === 'COMPLETE') {
+          if (event.type === 'COMPLETE') {
             setUploadState({ status: 'complete', resumeId, jobId })
             removeActiveJob(jobId)
             socket.disconnect()
@@ -66,7 +66,7 @@ export function useResumeUpload() {
               description: `${file.name} has been successfully analyzed.`,
               variant: 'success',
             })
-          } else if (event.event === 'ERROR') {
+          } else if (event.type === 'ERROR') {
             setUploadState({
               status: 'error',
               error: event.message ?? 'Analysis failed',

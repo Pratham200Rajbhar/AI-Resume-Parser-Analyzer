@@ -83,11 +83,12 @@ async def list_jds(
     repo = JdRepository(db)
     skip = (page - 1) * page_size
     jds = await repo.list_by_user(current_user.id, skip=skip, take=page_size)
+    total = await repo.count_by_user(current_user.id)
     items = [
         JDResponse(id=j.id, title=j.title, company=j.company, raw_text=j.rawText, created_at=j.createdAt)
         for j in jds
     ]
-    return JDListResponse(items=items, total=len(items))
+    return JDListResponse(items=items, total=total)
 
 
 @router.get("/{jd_id}", response_model=JDResponse)

@@ -142,8 +142,8 @@ axiosInstance.interceptors.response.use(
 
 export const api = {
   auth: {
-    register: async (email: string, password: string, fullName?: string): Promise<User> => {
-      const response = await axiosInstance.post<User>('/auth/register', {
+    register: async (email: string, password: string, fullName?: string): Promise<AuthTokens> => {
+      const response = await axiosInstance.post<AuthTokens>('/auth/register', {
         email,
         password,
         full_name: fullName,
@@ -331,6 +331,14 @@ export const api = {
       const response = await axiosInstance.post<ChatMessage>(
         `/coaching/sessions/${sessionId}/messages`,
         { message }
+      )
+      return response.data
+    },
+
+    updateSession: async (sessionId: string, title: string): Promise<CoachingSession> => {
+      const response = await axiosInstance.patch<CoachingSession>(
+        `/coaching/sessions/${sessionId}`,
+        { title }
       )
       return response.data
     },

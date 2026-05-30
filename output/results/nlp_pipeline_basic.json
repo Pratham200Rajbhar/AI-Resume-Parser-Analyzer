@@ -1,0 +1,48 @@
+{
+  "name": "",
+  "email": "pratham.rajbhar@gmail.com",
+  "phone": "+91 9512518403",
+  "location": "Gujarat",
+  "linkedin": "https://linkedin.com/in/prathamrajbhar",
+  "github": "https://github.com/prathamrajbhar",
+  "skill_count": 120,
+  "experience_count": 0,
+  "education_count": 2,
+  "skills_preview": [
+    {
+      "raw": "motivated",
+      "normalized": "motivated",
+      "onet_id": null,
+      "category": "Unknown",
+      "confidence": 0.0
+    },
+    {
+      "raw": "computer",
+      "normalized": "computer",
+      "onet_id": null,
+      "category": "Unknown",
+      "confidence": 0.0
+    },
+    {
+      "raw": "engineering",
+      "normalized": "engineering",
+      "onet_id": null,
+      "category": "Unknown",
+      "confidence": 0.0
+    },
+    {
+      "raw": "products",
+      "normalized": "Product Management",
+      "onet_id": "2.B.1.f",
+      "category": "Management",
+      "confidence": 0.701
+    },
+    {
+      "raw": "tight",
+      "normalized": "tight",
+      "onet_id": null,
+      "category": "Unknown",
+      "confidence": 0.0
+    }
+  ]
+}

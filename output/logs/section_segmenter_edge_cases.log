@@ -1,0 +1,19 @@
+============================================================
+TEST: section_segmenter / edge_cases
+============================================================
+
+[1] Empty string
+  OK — {'BODY': ''}
+
+[2] Plain text with no headers
+  OK — BODY section: 'John Doe is a software engineer with 5 years of experience i'
+
+[3] Text with explicit headers
+  Sections: ['SKILLS', 'EDUCATION']
+  OK — headers detected
+
+[4] Duplicate section headers
+  SKILLS content: 'Python\nJavaScript'
+  OK
+
+All assertions PASSED

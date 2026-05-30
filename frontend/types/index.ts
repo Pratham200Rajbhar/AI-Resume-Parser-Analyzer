@@ -157,16 +157,25 @@ export interface ChatMessage {
 }
 
 export interface JobProgressEvent {
-  event:
+  // Backend publishes "type" not "event" — keep both for compatibility
+  type:
     | 'JOB_STARTED'
     | 'PARSING_COMPLETE'
     | 'ENTITIES_READY'
     | 'ANALYSIS_READY'
     | 'COMPLETE'
     | 'ERROR'
-  job_id: string
+    | 'PING'
+    | string
+  job_id?: string
+  resume_id?: string
   message?: string
   data?: unknown
+  ats_score?: number
+  chars?: number
+  entity_count?: number
+  bias_count?: number
+  fraud_count?: number
 }
 
 export interface PaginatedResponse<T> {

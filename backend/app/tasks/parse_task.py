@@ -8,19 +8,27 @@ from app.tasks.celery_app import celery_app
 
 logger = structlog.get_logger(__name__)
 
+_redis_conn = None
+
+
+def _get_redis_conn():
+    global _redis_conn
+    if _redis_conn is None:
+        import redis  # noqa: PLC0415
+        from app.core.config import settings  # noqa: PLC0415
+        _redis_conn = redis.from_url(settings.redis_url, decode_responses=True)
+    return _redis_conn
+
 
 def _publish_sync(job_id: str, event_type: str, data: dict | None = None) -> None:
     """Synchronously publish a WebSocket event via Redis."""
-    import redis
-
-    from app.core.config import settings  # noqa: PLC0415
-
-    r = redis.from_url(settings.redis_url, decode_responses=True)
     payload = {"type": event_type, "job_id": job_id}
     if data:
         payload.update(data)
-    r.publish(f"job:{job_id}", json.dumps(payload))
-    r.close()
+    try:
+        _get_redis_conn().publish(f"job:{job_id}", json.dumps(payload))
+    except Exception as exc:
+        logger.warning("redis_publish_failed", job_id=job_id, event=event_type, error=str(exc))
 
 
 async def _process_resume_async(

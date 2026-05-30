@@ -1,0 +1,20 @@
+============================================================
+TEST: nlp_pipeline / basic
+============================================================
+Running NLP pipeline on 2814 chars...
+
+Extracted fields:
+  name:     ''
+  email:    'pratham.rajbhar@gmail.com'
+  phone:    '+91 9512518403'
+  location: 'Gujarat'
+  linkedin: 'https://linkedin.com/in/prathamrajbhar'
+  github:   'https://github.com/prathamrajbhar'
+  skills:   120 entries
+  experience: 0 entries
+  education:  2 entries
+  certifications: 0
+  projects: 18
+  summary:  'Motivated Computer Engineering undergraduate (B.Tech, 6th Semester, Ganpat University) with a 9.4 CG'
+
+All assertions PASSED

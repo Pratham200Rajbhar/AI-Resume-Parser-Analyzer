@@ -1,0 +1,72 @@
+[
+  {
+    "raw": "Python",
+    "normalized": "Python",
+    "onet_id": "2.A.1.a",
+    "category": "Technology",
+    "confidence": 1.0
+  },
+  {
+    "raw": "JavaScript",
+    "normalized": "JavaScript",
+    "onet_id": "2.A.1.b",
+    "category": "Technology",
+    "confidence": 1.0
+  },
+  {
+    "raw": "SQL",
+    "normalized": "SQL",
+    "onet_id": "2.A.3.a",
+    "category": "Database",
+    "confidence": 1.0
+  },
+  {
+    "raw": "React.js",
+    "normalized": "React",
+    "onet_id": "2.A.2.a",
+    "category": "Framework",
+    "confidence": 0.883
+  },
+  {
+    "raw": "Next.js",
+    "normalized": "Next.js",
+    "onet_id": null,
+    "category": "Unknown",
+    "confidence": 0.0
+  },
+  {
+    "raw": "FastAPI",
+    "normalized": "FastAPI",
+    "onet_id": "2.A.2.c",
+    "category": "Framework",
+    "confidence": 1.0
+  },
+  {
+    "raw": "Docker",
+    "normalized": "Docker",
+    "onet_id": "2.A.4.a",
+    "category": "DevOps",
+    "confidence": 1.0
+  },
+  {
+    "raw": "PostgreSQL",
+    "normalized": "PostgreSQL",
+    "onet_id": "2.A.3.b",
+    "category": "Database",
+    "confidence": 1.0
+  },
+  {
+    "raw": "Redis",
+    "normalized": "Redis",
+    "onet_id": "2.A.3.d",
+    "category": "Database",
+    "confidence": 1.0
+  },
+  {
+    "raw": "LangChain",
+    "normalized": "LangChain",
+    "onet_id": null,
+    "category": "Unknown",
+    "confidence": 0.0
+  }
+]

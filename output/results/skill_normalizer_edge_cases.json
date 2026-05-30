@@ -1,0 +1,7 @@
+{
+  "empty_handled": true,
+  "whitespace_skipped": true,
+  "exact_match": true,
+  "unknown_fallback": true,
+  "case_insensitive": true
+}

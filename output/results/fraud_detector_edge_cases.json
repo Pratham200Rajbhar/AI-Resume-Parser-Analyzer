@@ -1,0 +1,7 @@
+{
+  "empty_handled": true,
+  "overlap_detected": true,
+  "future_grad_detected": true,
+  "gap_detected": true,
+  "implausible_tenure_detected": true
+}

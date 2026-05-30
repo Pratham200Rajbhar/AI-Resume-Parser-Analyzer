@@ -1,0 +1,19 @@
+============================================================
+TEST: jd_matcher / edge_cases
+============================================================
+
+[1] Empty JD text
+  match_score=0.0522, gap_skills=[]
+  OK — no crash on empty JD
+
+[2] Empty resume
+  match_score=0.052
+  OK — no crash on empty resume
+
+[3] Embedding type check
+  OK — embedding is list[float] of length 384
+
+[4] Keyword coverage bounds
+  OK — coverage_pct=66.7
+
+All assertions PASSED

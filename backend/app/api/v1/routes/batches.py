@@ -1,3 +1,4 @@
+import hashlib
 import io
 from datetime import datetime
 
@@ -8,8 +9,11 @@ from prisma.models import User
 from pydantic import BaseModel, ConfigDict
 
 from app.api.deps import get_current_user, get_db
+from app.core.config import settings
 from app.db.repositories.batch_repo import BatchRepository
 from app.db.repositories.resume_repo import ResumeRepository
+from app.services.export import ExportService
+from app.services.storage import StorageService
 from prisma import Prisma
 
 logger = structlog.get_logger(__name__)
@@ -94,14 +98,9 @@ async def upload_batch_files(
     if batch is None or batch.userId != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
 
-    from app.core.config import settings  # noqa: PLC0415
-    from app.services.storage import StorageService  # noqa: PLC0415
-
     storage = StorageService()
     resume_repo = ResumeRepository(db)
     resume_ids: list[str] = []
-
-    import hashlib  # noqa: PLC0415
 
     for file in files:
         content = await file.read()
@@ -118,8 +117,7 @@ async def upload_batch_files(
         dest_dir = settings.upload_dir / current_user.id / "batch" / batch_id
         dest_dir.mkdir(parents=True, exist_ok=True)
 
-        import io as _io  # noqa: PLC0415
-        file.file = _io.BytesIO(content)
+        file.file = io.BytesIO(content)
         saved_path = await storage.save_file(file, dest_dir)
 
         resume = await resume_repo.create(
@@ -246,8 +244,6 @@ async def export_csv(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
     if not batch.rankedResults:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No rankings available")
-
-    from app.services.export import ExportService  # noqa: PLC0415
 
     exporter = ExportService()
     csv_content = exporter.batch_to_csv(batch.rankedResults)

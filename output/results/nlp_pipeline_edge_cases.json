@@ -1,0 +1,7 @@
+{
+  "empty_handled": true,
+  "whitespace_handled": true,
+  "email_extracted": true,
+  "phone_extracted": true,
+  "urls_extracted": true
+}

@@ -1,0 +1,7 @@
+{
+  "empty_handled": true,
+  "whitespace_handled": true,
+  "gender_detected": true,
+  "age_detected": true,
+  "personal_detected": true
+}

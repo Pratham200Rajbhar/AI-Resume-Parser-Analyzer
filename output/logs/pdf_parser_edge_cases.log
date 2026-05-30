@@ -1,0 +1,17 @@
+============================================================
+TEST: pdf_parser / edge_cases
+============================================================
+
+[1] Router dispatch for .pdf
+  OK — 2814 chars returned
+
+[2] Router raises ValueError for unsupported type
+  OK — ValueError raised: Unsupported file type: 'xyz'. Supported: pdf, docx, doc, txt, text, png, jpg, jpeg, tiff, bmp, webp
+
+[3] Router handles '.pdf' with leading dot
+  OK — 2814 chars returned
+
+[4] Text structure check
+  OK — text has 386 words and newlines
+
+All assertions PASSED

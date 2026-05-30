@@ -1,0 +1,11 @@
+{
+  "intent_cases_tested": 10,
+  "all_passed": true,
+  "fallback_intents": [
+    "rewrite",
+    "cover_letter",
+    "skill_gap",
+    "interview",
+    "default"
+  ]
+}

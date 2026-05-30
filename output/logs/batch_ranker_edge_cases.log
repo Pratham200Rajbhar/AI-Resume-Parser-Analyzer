@@ -1,0 +1,17 @@
+============================================================
+TEST: batch_ranker / edge_cases
+============================================================
+
+[1] Empty candidate list
+  OK — empty list returns []
+
+[2] Single candidate
+  OK — single candidate ranked: {'resume_id': 'r1', 'candidate_name': 'Pratham Rajbhar', 'composite_score': 41.25, 'component_scores': {'ats_score': 75, 'match_score': 0.0, 'skills_score': 0.15, 'experience_score': 0.0, 'education_score': 0.0}, 'rank': 1}
+
+[3] No JD embedding — ATS score path
+  OK — A ranked first with ATS score 90
+
+[4] Composite score bounds
+  OK — all scores in [0, 100]
+
+All assertions PASSED

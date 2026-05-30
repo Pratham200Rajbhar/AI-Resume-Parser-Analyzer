@@ -1,0 +1,14 @@
+============================================================
+TEST: career_coach / system_prompt
+============================================================
+
+[1] System prompt with resume + JD
+  OK — prompt length: 1502 chars
+
+[2] System prompt without JD
+  OK — no-JD placeholder present
+
+[3] System prompt with empty entities
+  OK — no-resume placeholder present
+
+All assertions PASSED

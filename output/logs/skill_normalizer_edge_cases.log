@@ -1,0 +1,22 @@
+============================================================
+TEST: skill_normalizer / edge_cases
+============================================================
+
+[1] Empty list
+  OK — empty list returns []
+
+[2] Whitespace-only strings
+  OK — whitespace-only strings skipped
+
+[3] Exact match
+  Python → {'raw': 'Python', 'normalized': 'Python', 'onet_id': '2.A.1.a', 'category': 'Technology', 'confidence': 1.0}
+
+[4] Unknown/nonsense skill
+  OK — fallback: {'raw': 'xyzzy_nonexistent_skill_abc', 'normalized': 'xyzzy_nonexistent_skill_abc', 'onet_id': None, 'category': 'Unknown', 'confidence': 0.0}
+
+[5] Case insensitivity
+  lower: {'raw': 'python', 'normalized': 'Python', 'onet_id': '2.A.1.a', 'category': 'Technology', 'confidence': 1.0}
+  upper: {'raw': 'PYTHON', 'normalized': 'Python', 'onet_id': '2.A.1.a', 'category': 'Technology', 'confidence': 1.0}
+  OK — case insensitive
+
+All assertions PASSED

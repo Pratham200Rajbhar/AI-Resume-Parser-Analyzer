@@ -1,0 +1,12 @@
+============================================================
+TEST: batch_ranker / basic
+============================================================
+Ranked 3 candidates:
+  Rank 1: Pratham Rajbhar — composite=61.00
+    components: {'ats_score': 82, 'match_score': 0.0, 'skills_score': 0.6, 'experience_score': 0.0, 'education_score': 0.5}
+  Rank 2: Bob Lee — composite=48.75
+    components: {'ats_score': 70, 'match_score': 0.0, 'skills_score': 0.25, 'experience_score': 0.0, 'education_score': 0.75}
+  Rank 3: Jane Smith — composite=36.25
+    components: {'ats_score': 55, 'match_score': 0.0, 'skills_score': 0.15, 'experience_score': 0.0, 'education_score': 0.5}
+
+All assertions PASSED

@@ -36,6 +36,9 @@ class JdRepository:
             take=take,
         )
 
+    async def count_by_user(self, user_id: str) -> int:
+        return await self.db.jobdescription.count(where={"userId": user_id})
+
     async def delete(self, jd_id: str) -> JobDescription:
         return await self.db.jobdescription.delete(where={"id": jd_id})
 

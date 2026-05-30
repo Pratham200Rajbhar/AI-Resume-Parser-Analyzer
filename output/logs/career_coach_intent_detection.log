@@ -1,0 +1,24 @@
+============================================================
+TEST: career_coach / intent_detection
+============================================================
+
+Intent detection results:
+  [OK] 'Can you rewrite my bullet points?'           → 'rewrite' (expected 'rewrite')
+  [OK] 'Help me improve this bullet point'           → 'rewrite' (expected 'rewrite')
+  [OK] 'Write me a cover letter for this job'        → 'cover_letter' (expected 'cover_letter')
+  [OK] 'I need a covering letter'                    → 'cover_letter' (expected 'cover_letter')
+  [OK] 'What skill gap do I have?'                   → 'skill_gap' (expected 'skill_gap')
+  [OK] 'What skills am I missing?'                   → 'skill_gap' (expected 'skill_gap')
+  [OK] 'Help me prepare for the interview'           → 'interview' (expected 'interview')
+  [OK] 'What interview questions should I expect?'   → 'interview' (expected 'interview')
+  [OK] 'Tell me about yourself'                      → 'default' (expected 'default')
+  [OK] ''                                            → 'default' (expected 'default')
+
+Fallback response check:
+  [rewrite] 236 chars — OK
+  [cover_letter] 219 chars — OK
+  [skill_gap] 163 chars — OK
+  [interview] 208 chars — OK
+  [default] 225 chars — OK
+
+All assertions PASSED

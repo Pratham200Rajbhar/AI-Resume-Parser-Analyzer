@@ -1,0 +1,6 @@
+{
+  "router_dispatch": true,
+  "unsupported_raises": true,
+  "leading_dot_handled": true,
+  "multipage_separator": true
+}

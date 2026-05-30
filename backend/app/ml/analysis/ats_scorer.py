@@ -160,28 +160,36 @@ class ATSScorer:
         breakdown: dict,
     ) -> list[float]:
         """Build a feature vector for the XGBoost model."""
-        word_count = len(raw_text.split())
-        skill_count = len(entities.get("skills", []))
-        exp_count = len(entities.get("experience", []))
-        edu_count = len(entities.get("education", []))
+        word_count = float(len(raw_text.split()))
+        quantified_achievements = float(len(re.findall(r"\d+", raw_text)))
+        bullet_count = float(raw_text.count("•") + raw_text.count("-"))
+        keyword_density = float(len(entities.get("skills", []))) / max(word_count, 1.0)
         has_email = 1.0 if entities.get("email") else 0.0
         has_phone = 1.0 if entities.get("phone") else 0.0
-        section_count = len(sections)
+        has_linkedin = 1.0 if entities.get("linkedin") else 0.0
+        has_github = 1.0 if entities.get("github") else 0.0
+        is_pdf = 1.0  # Default assumption for this model version
+        is_docx = 0.0
+        is_image = 0.0
         has_table = 1.0 if _TABLE_PATTERN.search(raw_text) else 0.0
         has_multi_col = 1.0 if _MULTI_COLUMN_PATTERN.search(raw_text) else 0.0
-        sections_score = breakdown.get("sections", 0)
-        keywords_score = breakdown.get("keywords", 0)
+        special_chars_in_headers = 0.0
+        fonts_flag = 0.0
 
         return [
             word_count,
-            skill_count,
-            exp_count,
-            edu_count,
+            quantified_achievements,
+            bullet_count,
+            keyword_density,
             has_email,
             has_phone,
-            section_count,
+            has_linkedin,
+            has_github,
+            is_pdf,
+            is_docx,
+            is_image,
             has_table,
             has_multi_col,
-            sections_score,
-            keywords_score,
+            special_chars_in_headers,
+            fonts_flag,
         ]

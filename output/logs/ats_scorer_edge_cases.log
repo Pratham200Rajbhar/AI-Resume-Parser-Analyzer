@@ -1,0 +1,20 @@
+============================================================
+TEST: ats_scorer / edge_cases
+============================================================
+
+[1] Empty entities
+  Score: 20, suggestions: 9
+  OK
+
+[2] Missing required sections
+  Score: 40, suggestions: ["Add a 'CONTACT' section to improve ATS compatibility.", "Add a 'EDUCATION' section to improve ATS compatibility.", "Add a 'EXPERIENCE' section to improve ATS compatibility.", "Add a 'SKILLS' section to improve ATS compatibility.", 'Add more relevant skills to improve keyword matching.', 'Resume is too short. Add more detail to your experience and skills.']
+  OK
+
+[3] Very short text
+  Score: 35
+  OK
+
+[4] Score bounds check
+  OK — score always in [0, 100]
+
+All assertions PASSED

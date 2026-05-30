@@ -1,0 +1,6 @@
+{
+  "empty_handled": true,
+  "single_candidate": true,
+  "no_jd_embedding": true,
+  "score_bounded": true
+}

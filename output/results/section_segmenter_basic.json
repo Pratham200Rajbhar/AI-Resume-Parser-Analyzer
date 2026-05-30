@@ -1,0 +1,16 @@
+{
+  "sections_found": [
+    "HEADER",
+    "SUMMARY",
+    "PROJECTS",
+    "SKILLS",
+    "EDUCATION"
+  ],
+  "section_lengths": {
+    "HEADER": 162,
+    "SUMMARY": 454,
+    "PROJECTS": 1435,
+    "SKILLS": 380,
+    "EDUCATION": 300
+  }
+}

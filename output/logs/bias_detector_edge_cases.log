@@ -1,0 +1,20 @@
+============================================================
+TEST: bias_detector / edge_cases
+============================================================
+
+[1] Empty text
+  OK — empty text returns []
+
+[2] Whitespace only
+  OK
+
+[3] Gendered title (Mr.)
+  OK — gender flag: 'Mr'
+
+[4] Age disclosure (born in YYYY)
+  OK — age flag: 'Born in 1990'
+
+[5] Marital status
+  OK — personal flag: 'Marital status: Married.'
+
+All assertions PASSED

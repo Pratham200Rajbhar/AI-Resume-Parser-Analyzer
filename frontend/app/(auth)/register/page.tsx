@@ -92,8 +92,7 @@ export default function RegisterPage() {
     setIsSubmitting(true)
 
     try {
-      await api.auth.register(email, password, fullName)
-      const tokens = await api.auth.login(email, password)
+      const tokens = await api.auth.register(email, password, fullName)
       setTokens(tokens.accessToken, tokens.refreshToken)
       const user = await api.auth.me()
       setUser(user)

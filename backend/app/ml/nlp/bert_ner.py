@@ -21,15 +21,29 @@ def _get_pipeline() -> _HFPipeline:
         from transformers import pipeline  # noqa: PLC0415
 
         model_path = str(_WEIGHTS_DIR)
-        logger.info("bert_ner_loading", model_path=model_path)
-        _pipeline_instance = pipeline(
-            "ner",
-            model=model_path,
-            tokenizer=model_path,
-            aggregation_strategy="simple",
-            device=-1,  # CPU; set to 0 for GPU
-        )
-        logger.info("bert_ner_loaded")
+        
+        if not _WEIGHTS_DIR.exists() or not any(_WEIGHTS_DIR.iterdir()):
+            logger.warning("bert_ner_weights_missing_downloading", model_path=model_path)
+            _WEIGHTS_DIR.mkdir(parents=True, exist_ok=True)
+            # Download base NER model and save it locally to our models directory
+            _pipeline_instance = pipeline(
+                "ner",
+                model="dslim/bert-base-NER",
+                aggregation_strategy="simple",
+                device=-1,
+            )
+            _pipeline_instance.save_pretrained(model_path)
+            logger.info("bert_ner_downloaded_and_saved", model_path=model_path)
+        else:
+            logger.info("bert_ner_loading", model_path=model_path)
+            _pipeline_instance = pipeline(
+                "ner",
+                model=model_path,
+                tokenizer=model_path,
+                aggregation_strategy="simple",
+                device=-1,  # CPU; set to 0 for GPU
+            )
+            logger.info("bert_ner_loaded")
     return _pipeline_instance
 
 

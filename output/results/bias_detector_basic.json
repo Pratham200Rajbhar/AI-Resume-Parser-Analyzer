@@ -1,0 +1,11 @@
+{
+  "flags": [
+    {
+      "type": "age",
+      "term": " \n \nPRATHAM RAJBHAR \nAhmedabad, Gujarat | +91 9512518403 | pratham.rajbhar@gmail.com \nprathamrajbhar",
+      "sentence": "PRATHAM RAJBHAR \nAhmedabad, Gujarat | +91 9512518403 | pratham.rajbhar@gmail.com \nprathamrajbhar.tech | linkedin.com/in/prathamrajbhar | github.com/prathamrajbhar \nPROFESSIONAL SUMMARY \n \nMotivated Computer Engineering undergraduate (B.Tech, 6th Semester, Ganpat University) with a 9.4 CGPA in \nDiploma and real-world experience across 6 hackathons where I built and shipped working products under tight \ndeadlines.",
+      "suggestion": "Review this sentence for potential age-related bias."
+    }
+  ],
+  "flag_count": 1
+}

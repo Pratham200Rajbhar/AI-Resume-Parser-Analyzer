@@ -1,0 +1,11 @@
+============================================================
+TEST: section_segmenter / basic
+============================================================
+Detected sections: ['HEADER', 'SUMMARY', 'PROJECTS', 'SKILLS', 'EDUCATION']
+  [HEADER] 162 chars — preview: 'PRATHAM RAJBHAR \nAhmedabad, Gujarat | +91 9512518403 | pratham.rajbhar@gmail.com'
+  [SUMMARY] 454 chars — preview: 'Motivated Computer Engineering undergraduate (B.Tech, 6th Semester, Ganpat Unive'
+  [PROJECTS] 1435 chars — preview: 'KeplerLab AI Notebook \n• \nBuilt a full-stack AI platform with 25+ modular FastAP'
+  [SKILLS] 380 chars — preview: '• Languages & Frontend: Python, JavaScript , SQL, React.js, Next.js, Tailwind CS'
+  [EDUCATION] 300 chars — preview: 'Bachelor of Technology in Computer Engineering \nAug 2024 - Present \nGanpat Unive'
+
+All assertions PASSED

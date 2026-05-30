@@ -101,6 +101,7 @@ async def list_sessions(
     repo = CoachingRepository(db)
     skip = (page - 1) * page_size
     sessions = await repo.list_by_user(current_user.id, skip=skip, take=page_size)
+    total = await repo.count_by_user(current_user.id)
     items = [
         SessionResponse(
             id=s.id,
@@ -111,7 +112,7 @@ async def list_sessions(
         )
         for s in sessions
     ]
-    return SessionListResponse(items=items, total=len(items))
+    return SessionListResponse(items=items, total=total)
 
 
 @router.get("/sessions/{session_id}", response_model=SessionResponse)
@@ -179,6 +180,32 @@ async def send_message(
 
     logger.info("coaching_message_sent", session_id=session_id, user_id=current_user.id)
     return MessageResponse(role="assistant", content=reply)
+
+
+class UpdateSessionRequest(BaseModel):
+    title: str
+
+
+@router.patch("/sessions/{session_id}", response_model=SessionResponse)
+async def update_session(
+    session_id: str,
+    body: UpdateSessionRequest,
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SessionResponse:
+    repo = CoachingRepository(db)
+    session = await repo.get_by_id(session_id)
+    if session is None or session.userId != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    updated = await repo.update_title(session_id, body.title.strip())
+    logger.info("coaching_session_updated", session_id=session_id, user_id=current_user.id)
+    return SessionResponse(
+        id=updated.id,
+        title=updated.title,
+        messages=updated.messages or [],
+        created_at=updated.createdAt,
+        updated_at=updated.updatedAt,
+    )
 
 
 @router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -1,0 +1,21 @@
+============================================================
+TEST: fraud_detector / edge_cases
+============================================================
+
+[1] Empty entities
+  OK — empty entities returns []
+
+[2] Overlapping employment
+  Flags: [{'type': 'overlapping_employment', 'description': "'Engineer A' and 'Engineer B' overlap by approximately 47 month(s). Verify the dates.", 'severity': 'high'}]
+  OK — overlap detected: 'Engineer A' and 'Engineer B' overlap by approximately 47 month(s). Verify the dates.
+
+[3] Future graduation year
+  OK — future grad year detected: Graduation year 2099 is in the future.
+
+[4] Employment gap > 2 years
+  OK — gap detected: There is a gap of approximately 25 months between 'Dev A' and 'Dev B'. Consider addressing this in your cover letter.
+
+[5] Implausible tenure
+  OK — implausible tenure detected: Job 'Lifer' spans 40 years, which is unusually long. Please verify the dates.
+
+All assertions PASSED

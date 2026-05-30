@@ -1,0 +1,6 @@
+{
+  "empty_handled": true,
+  "no_headers_returns_body": true,
+  "headers_detected": true,
+  "duplicate_merged": true
+}

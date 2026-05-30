@@ -1,0 +1,12 @@
+============================================================
+TEST: ats_scorer / basic
+============================================================
+ATS Score: 67/100
+Breakdown: {'sections': 13, 'contact': 20, 'keywords': 25, 'format': 10, 'length': 10}
+Suggestions (4):
+  - Add a 'EXPERIENCE' section to improve ATS compatibility.
+  - Add a 'CONTACT' section to improve ATS compatibility.
+  - Avoid ASCII tables — ATS parsers often misread them.
+  - Your resume seems short. Aim for 400–800 words.
+
+All assertions PASSED

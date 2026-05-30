@@ -30,8 +30,15 @@ def _load_onet() -> list[dict]:
 def _get_embedder():
     global _embedder
     if _embedder is None:
+        from pathlib import Path
         from sentence_transformers import SentenceTransformer  # noqa: PLC0415
-        _embedder = SentenceTransformer(_EMBEDDING_MODEL_NAME)
+        
+        _WEIGHTS_DIR = Path(__file__).parent.parent / "models" / "weights"
+        try:
+            _embedder = SentenceTransformer(_EMBEDDING_MODEL_NAME, cache_folder=str(_WEIGHTS_DIR), local_files_only=True)
+        except Exception:
+            logger.warning("sentence_transformer_not_found_locally_downloading", model=_EMBEDDING_MODEL_NAME)
+            _embedder = SentenceTransformer(_EMBEDDING_MODEL_NAME, cache_folder=str(_WEIGHTS_DIR), local_files_only=False)
         logger.info("skill_normalizer_embedder_loaded", model=_EMBEDDING_MODEL_NAME)
     return _embedder
 
@@ -104,7 +111,11 @@ class SkillNormalizer:
         # 2. Fuzzy match (Levenshtein) — only consider short edit distances
         best_dist = 999
         best_skill: dict | None = None
+        max_allowed = max(2, int(len(lower) * 0.3))
         for name_lower, skill in self._name_map.items():
+            # Skip candidates whose length difference alone exceeds the threshold
+            if abs(len(name_lower) - len(lower)) > max_allowed:
+                continue
             dist = _levenshtein(lower, name_lower)
             if dist < best_dist:
                 best_dist = dist

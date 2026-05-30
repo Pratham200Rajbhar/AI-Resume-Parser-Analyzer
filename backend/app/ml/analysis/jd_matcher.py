@@ -17,9 +17,15 @@ _embedder = None
 def _get_embedder():
     global _embedder
     if _embedder is None:
+        from pathlib import Path
         from sentence_transformers import SentenceTransformer  # noqa: PLC0415
-
-        _embedder = SentenceTransformer(_EMBEDDING_MODEL_NAME)
+        
+        _WEIGHTS_DIR = Path(__file__).parent.parent / "models" / "weights"
+        try:
+            _embedder = SentenceTransformer(_EMBEDDING_MODEL_NAME, cache_folder=str(_WEIGHTS_DIR), local_files_only=True)
+        except Exception:
+            logger.warning("sentence_transformer_not_found_locally_downloading", model=_EMBEDDING_MODEL_NAME)
+            _embedder = SentenceTransformer(_EMBEDDING_MODEL_NAME, cache_folder=str(_WEIGHTS_DIR), local_files_only=False)
         logger.info("jd_matcher_embedder_loaded", model=_EMBEDDING_MODEL_NAME)
     return _embedder
 
@@ -99,10 +105,12 @@ class JDMatcher:
         experience = resume_entities.get("experience", [])
         role_texts = [e.get("role", "") for e in experience if isinstance(e, dict)]
 
+        skill_str = " ".join(skill_texts)
+        role_str = " ".join(role_texts)
         weighted_resume_text = (
             resume_text
-            + " " + " ".join(skill_texts) * 3   # skills weighted 3x
-            + " " + " ".join(role_texts) * 2     # roles weighted 2x
+            + (" " + skill_str) * 3   # skills weighted 3x
+            + (" " + role_str) * 2    # roles weighted 2x
         )
 
         resume_embedding = self.embed(weighted_resume_text)

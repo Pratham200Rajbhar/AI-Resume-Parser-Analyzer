@@ -1,0 +1,10 @@
+============================================================
+TEST: bias_detector / basic
+============================================================
+Bias flags detected: 1
+  [AGE] term=' \n \nPRATHAM RAJBHAR \nAhmedabad, Gujarat | +91 9512518403 | pratham.rajbhar@gmail.com \nprathamrajbhar'
+    suggestion: Review this sentence for potential age-related bias.
+
+Total flags: 1 (expected 0 for clean professional resume)
+
+All assertions PASSED

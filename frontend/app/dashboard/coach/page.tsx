@@ -85,6 +85,21 @@ export default function CoachPage() {
     setEditingTitle(true)
   }
 
+  async function confirmEditTitle() {
+    if (!selectedSessionId || !titleDraft.trim()) {
+      setEditingTitle(false)
+      return
+    }
+    try {
+      await api.coaching.updateSession(selectedSessionId, titleDraft.trim())
+      queryClient.invalidateQueries({ queryKey: ['coaching-sessions'] })
+    } catch {
+      addToast({ title: 'Failed to update title', variant: 'destructive' })
+    }
+    setEditingTitle(false)
+    setTitleDraft('')
+  }
+
   function cancelEditTitle() {
     setEditingTitle(false)
     setTitleDraft('')
@@ -169,11 +184,11 @@ export default function CoachPage() {
                       className="h-8 text-sm"
                       autoFocus
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') cancelEditTitle()
+                        if (e.key === 'Enter') confirmEditTitle()
                         if (e.key === 'Escape') cancelEditTitle()
                       }}
                     />
-                    <Button size="sm" variant="ghost" onClick={cancelEditTitle}>
+                    <Button size="sm" variant="ghost" onClick={confirmEditTitle}>
                       <Check className="w-4 h-4 text-green-600" />
                     </Button>
                     <Button size="sm" variant="ghost" onClick={cancelEditTitle}>
@@ -194,23 +209,18 @@ export default function CoachPage() {
                     </button>
                   </div>
                 )}
-                {selectedSession && (
+                {selectedSession && selectedSession.resumeAnalysisId && (
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <Select
-                      value={selectedSession.resumeAnalysisId ?? ''}
-                      onValueChange={() => {}}
-                    >
-                      <SelectTrigger className="h-8 text-xs w-40">
-                        <SelectValue placeholder="Link resume..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {analyzedResumes.map((r) => (
-                          <SelectItem key={r.id} value={r.analysis?.id ?? r.id}>
-                            {r.fileName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {(() => {
+                      const linked = analyzedResumes.find(
+                        (r) => r.analysis?.id === selectedSession.resumeAnalysisId || r.id === selectedSession.resumeAnalysisId
+                      )
+                      return linked ? (
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md truncate max-w-[160px]" title={linked.fileName}>
+                          {linked.fileName}
+                        </span>
+                      ) : null
+                    })()}
                   </div>
                 )}
               </div>

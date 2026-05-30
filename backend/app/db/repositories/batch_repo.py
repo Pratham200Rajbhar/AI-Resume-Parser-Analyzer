@@ -79,5 +79,13 @@ class CoachingRepository:
             take=take,
         )
 
+    async def count_by_user(self, user_id: str) -> int:
+        return await self.db.coachingsession.count(where={"userId": user_id})
+
+    async def update_title(self, session_id: str, title: str) -> CoachingSession:
+        return await self.db.coachingsession.update(
+            where={"id": session_id}, data={"title": title}
+        )
+
     async def delete(self, session_id: str) -> CoachingSession:
         return await self.db.coachingsession.delete(where={"id": session_id})
