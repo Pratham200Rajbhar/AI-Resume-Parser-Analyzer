@@ -8,8 +8,8 @@
     "length": 10
   },
   "suggestions": [
-    "Add a 'EXPERIENCE' section to improve ATS compatibility.",
     "Add a 'CONTACT' section to improve ATS compatibility.",
+    "Add a 'EXPERIENCE' section to improve ATS compatibility.",
     "Avoid ASCII tables \u2014 ATS parsers often misread them.",
     "Your resume seems short. Aim for 400\u2013800 words."
   ]

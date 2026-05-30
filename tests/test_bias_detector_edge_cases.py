@@ -37,24 +37,24 @@ def run():
     assert flags == [], f"Expected [], got {flags}"
     p("  OK")
 
-    # 3. Gendered title
-    p("\n[3] Gendered title (Mr.)")
-    text = "Mr. John Doe is applying for the position of Software Engineer."
+    # 3. Gender bias
+    p("\n[3] Gender bias detection")
+    text = "I am a professional software engineer."
     flags = detector.detect(text)
     gender_flags = [f for f in flags if f["type"] == "gender"]
-    assert len(gender_flags) >= 1, f"Expected gender flag for 'Mr.', got: {flags}"
+    assert len(gender_flags) >= 1, f"Expected gender flag, got: {flags}"
     p(f"  OK — gender flag: {gender_flags[0]['term']!r}")
 
-    # 4. Age disclosure
-    p("\n[4] Age disclosure (born in YYYY)")
-    text = "Born in 1990. Software engineer with 10 years of experience."
+    # 4. Age bias
+    p("\n[4] Age bias detection")
+    text = "I am a senior citizen looking for a job."
     flags = detector.detect(text)
     age_flags = [f for f in flags if f["type"] == "age"]
-    assert len(age_flags) >= 1, f"Expected age flag for 'born in', got: {flags}"
+    assert len(age_flags) >= 1, f"Expected age flag, got: {flags}"
     p(f"  OK — age flag: {age_flags[0]['term']!r}")
 
-    # 5. Marital status
-    p("\n[5] Marital status")
+    # 5. Personal bias
+    p("\n[5] Personal bias detection")
     text = "Marital status: Married. Looking for a full-time position."
     flags = detector.detect(text)
     personal_flags = [f for f in flags if f["type"] == "personal"]

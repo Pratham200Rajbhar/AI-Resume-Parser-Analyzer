@@ -141,7 +141,14 @@ class BatchRanker:
             scored.append({
                 "resume_id": candidate.get("resume_id", ""),
                 "candidate_name": candidate.get("candidate_name", entities.get("name", "Unknown")),
+                "file_name": candidate.get("file_name", ""),
+                "entities": entities,
                 "composite_score": round(composite * 100, 2),  # scale to 0–100
+                "ats_score": ats_score,
+                "match_score": round(match_score * 100, 2),
+                "skills_score": round(skills_score * 100, 2),
+                "experience_score": round(experience_score * 100, 2),
+                "education_score": round(education_score * 100, 2),
                 "component_scores": component_scores,
             })
 

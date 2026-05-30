@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import structlog
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from prisma.models import User
 from pydantic import BaseModel, ConfigDict
@@ -59,12 +59,14 @@ class ResumeListResponse(BaseModel):
 
 
 class AnalysisResponse(BaseModel):
+    id: str
     resume_id: str
     ats_score: int
     ats_breakdown: dict
     entities_json: dict
     bias_flags_json: list
     fraud_flags_json: list
+    created_at: datetime
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -100,6 +102,7 @@ def _analysis_to_dict(analysis) -> dict | None:
         "entities_json": analysis.entitiesJson,
         "bias_flags_json": analysis.biasFlagsJson,
         "fraud_flags_json": analysis.fraudFlagsJson,
+        "created_at": analysis.createdAt.isoformat() if hasattr(analysis.createdAt, 'isoformat') else str(analysis.createdAt),
     }
 
 
@@ -107,6 +110,7 @@ def _analysis_to_dict(analysis) -> dict | None:
 
 @router.post("/upload", response_model=UploadResponse, status_code=status.HTTP_202_ACCEPTED)
 async def upload_resume(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: Prisma = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -143,18 +147,20 @@ async def upload_resume(
         file_hash=file_hash,
     )
 
-    # Enqueue Celery task
-    from app.tasks.parse_task import process_resume  # noqa: PLC0415
+    # Enqueue Background Task
+    from app.tasks.parse_task import run_process_resume  # noqa: PLC0415
 
-    task = process_resume.delay(
+    job_id = str(uuid.uuid4())
+    background_tasks.add_task(
+        run_process_resume,
+        job_id=job_id,
         resume_id=resume.id,
         file_path=str(saved_path),
         file_type=file_type,
-        user_id=current_user.id,
     )
 
-    logger.info("resume_uploaded", resume_id=resume.id, task_id=task.id, user_id=current_user.id)
-    return UploadResponse(resume_id=resume.id, job_id=task.id)
+    logger.info("resume_uploaded", resume_id=resume.id, job_id=job_id, user_id=current_user.id)
+    return UploadResponse(resume_id=resume.id, job_id=job_id)
 
 
 @router.get("/", response_model=ResumeListResponse)
@@ -223,12 +229,14 @@ async def get_analysis(
             detail="Analysis not yet available",
         )
     return AnalysisResponse(
+        id=analysis.id,
         resume_id=resume_id,
         ats_score=analysis.atsScore,
         ats_breakdown=analysis.atsBreakdown,
         entities_json=analysis.entitiesJson,
         bias_flags_json=analysis.biasFlagsJson,
         fraud_flags_json=analysis.fraudFlagsJson,
+        created_at=analysis.createdAt,
     )
 
 

@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import type { ChatMessage } from '@/types'
 import { Button } from '@/components/ui/button'
 import { cn, formatDate } from '@/lib/utils'
@@ -34,6 +36,10 @@ function TypingIndicator() {
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user'
 
+  if (!isUser && !message.content) {
+    return null
+  }
+
   return (
     <div className={cn('flex items-end gap-2', isUser && 'flex-row-reverse')}>
       <div
@@ -51,13 +57,36 @@ function MessageBubble({ message }: { message: ChatMessage }) {
       <div className={cn('max-w-[75%] space-y-1', isUser && 'items-end flex flex-col')}>
         <div
           className={cn(
-            'px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap',
+            'px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
             isUser
-              ? 'bg-indigo-600 text-white rounded-br-sm'
+              ? 'bg-indigo-600 text-white rounded-br-sm whitespace-pre-wrap'
               : 'bg-gray-100 text-gray-900 rounded-bl-sm'
           )}
         >
-          {message.content}
+          {isUser ? (
+            message.content
+          ) : (
+            <div
+              className="prose prose-sm max-w-none text-gray-900 break-words space-y-2
+                [&>p]:leading-relaxed [&>p]:mb-2 [&>p:last-child]:mb-0
+                [&>ul]:list-disc [&>ul]:pl-4 [&>ul]:space-y-1 [&>ul]:mb-2
+                [&>ol]:list-decimal [&>ol]:pl-4 [&>ol]:space-y-1 [&>ol]:mb-2
+                [&>li]:text-sm
+                [&>h1]:text-base [&>h1]:font-bold [&>h1]:mt-3 [&>h1]:mb-1
+                [&>h2]:text-sm [&>h2]:font-bold [&>h2]:mt-3 [&>h2]:mb-1
+                [&>h3]:text-sm [&>h3]:font-semibold [&>h3]:mt-2 [&>h3]:mb-1
+                [&>code]:bg-gray-200 [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-xs [&>code]:font-mono
+                [&>pre]:bg-gray-800 [&>pre]:text-gray-100 [&>pre]:p-3 [&>pre]:rounded-lg [&>pre]:overflow-x-auto [&>pre]:my-2
+                [&>pre>code]:bg-transparent [&>pre>code]:p-0 [&>pre>code]:text-xs
+                [&>blockquote]:border-l-4 [&>blockquote]:border-gray-300 [&>blockquote]:pl-3 [&>blockquote]:italic [&>blockquote]:text-gray-600
+                [&>hr]:border-gray-200 [&>hr]:my-2
+              "
+            >
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {message.content}
+              </ReactMarkdown>
+            </div>
+          )}
         </div>
         <p className="text-xs text-gray-400 px-1">
           {new Date(message.timestamp).toLocaleTimeString([], {
@@ -133,7 +162,11 @@ export function ChatInterface({
         ) : (
           messages.map((msg, i) => <MessageBubble key={i} message={msg} />)
         )}
-        {isLoading && <TypingIndicator />}
+        {isLoading && (
+          messages.length === 0 ||
+          messages[messages.length - 1].role === 'user' ||
+          (messages[messages.length - 1].role === 'assistant' && !messages[messages.length - 1].content)
+        ) && <TypingIndicator />}
         <div ref={messagesEndRef} />
       </div>
 

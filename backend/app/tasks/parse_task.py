@@ -2,9 +2,8 @@ import asyncio
 import json
 
 import structlog
-from celery import Task
+from prisma import Json
 
-from app.tasks.celery_app import celery_app
 
 logger = structlog.get_logger(__name__)
 
@@ -91,11 +90,11 @@ async def _process_resume_async(
                 where={"resumeId": resume_id},
                 data={
                     "rawText": raw_text,
-                    "entitiesJson": entities,
+                    "entitiesJson": Json(entities),
                     "atsScore": ats_result["score"],
-                    "atsBreakdown": breakdown_with_suggestions,
-                    "biasFlagsJson": bias_flags,
-                    "fraudFlagsJson": fraud_flags,
+                    "atsBreakdown": Json(breakdown_with_suggestions),
+                    "biasFlagsJson": Json(bias_flags),
+                    "fraudFlagsJson": Json(fraud_flags),
                 },
             )
         else:
@@ -103,11 +102,11 @@ async def _process_resume_async(
                 data={
                     "resumeId": resume_id,
                     "rawText": raw_text,
-                    "entitiesJson": entities,
+                    "entitiesJson": Json(entities),
                     "atsScore": ats_result["score"],
-                    "atsBreakdown": breakdown_with_suggestions,
-                    "biasFlagsJson": bias_flags,
-                    "fraudFlagsJson": fraud_flags,
+                    "atsBreakdown": Json(breakdown_with_suggestions),
+                    "biasFlagsJson": Json(bias_flags),
+                    "fraudFlagsJson": Json(fraud_flags),
                 }
             )
 
@@ -134,16 +133,11 @@ async def _process_resume_async(
         await db.disconnect()
 
 
-@celery_app.task(bind=True, name="tasks.process_resume", max_retries=3)
-def process_resume(
-    self: Task,
+def run_process_resume(
+    job_id: str,
     resume_id: str,
     file_path: str,
     file_type: str,
-    user_id: str,
 ) -> dict:
-    job_id = self.request.id or resume_id
-    try:
-        return asyncio.run(_process_resume_async(job_id, resume_id, file_path, file_type))
-    except Exception as exc:
-        raise self.retry(exc=exc, countdown=30)
+    """Synchronous entry point to run the async resume processing pipeline in a thread pool."""
+    return asyncio.run(_process_resume_async(job_id, resume_id, file_path, file_type))

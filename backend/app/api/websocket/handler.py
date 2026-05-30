@@ -14,7 +14,7 @@ ws_router = APIRouter(tags=["websocket"])
 async def job_status_ws(websocket: WebSocket, job_id: str) -> None:
     """
     Subscribe to real-time job progress events for a given job_id.
-    Messages are published to Redis channel `job:{job_id}` by Celery tasks.
+    Messages are published to Redis channel `job:{job_id}` by background tasks.
     The connection closes automatically when a COMPLETE or ERROR event is received.
     """
     await websocket.accept()
@@ -25,57 +25,75 @@ async def job_status_ws(websocket: WebSocket, job_id: str) -> None:
     pubsub = redis_client.pubsub()
     channel = f"job:{job_id}"
 
-    try:
-        await pubsub.subscribe(channel)
-        logger.info("ws_subscribed", channel=channel)
+    async def read_from_redis() -> None:
+        try:
+            await pubsub.subscribe(channel)
+            logger.info("ws_subscribed", channel=channel)
 
-        while True:
-            try:
-                # Poll for a message with a short timeout so we can detect client disconnects
-                message = await asyncio.wait_for(pubsub.get_message(ignore_subscribe_messages=True), timeout=1.0)
-            except TimeoutError:
-                # Send a heartbeat ping to detect stale connections
+            while True:
+                # get_message with timeout blocks until a message is available
+                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                if message is None:
+                    # Send a heartbeat ping to keep connection alive and detect stale connections
+                    try:
+                        await websocket.send_text(json.dumps({"type": "PING"}))
+                    except WebSocketDisconnect:
+                        break
+                    continue
+
+                data_raw = message.get("data")
+                if isinstance(data_raw, bytes):
+                    data_raw = data_raw.decode("utf-8")
+
                 try:
-                    await websocket.send_text(json.dumps({"type": "PING"}))
+                    payload = json.loads(data_raw)
+                except (json.JSONDecodeError, TypeError):
+                    payload = {"type": "MESSAGE", "data": data_raw}
+
+                try:
+                    await websocket.send_text(json.dumps(payload))
                 except WebSocketDisconnect:
                     break
-                continue
 
-            if message is None:
-                continue
-
-            data_raw = message.get("data")
-            if isinstance(data_raw, bytes):
-                data_raw = data_raw.decode("utf-8")
-
+                # Terminal events — close the connection
+                event_type = payload.get("type", "")
+                if event_type in ("COMPLETE", "ERROR"):
+                    logger.info("ws_terminal_event", job_id=job_id, event_type=event_type)
+                    break
+        except Exception as exc:
+            logger.error("ws_redis_stream_error", job_id=job_id, error=str(exc))
             try:
-                payload = json.loads(data_raw)
-            except (json.JSONDecodeError, TypeError):
-                payload = {"type": "MESSAGE", "data": data_raw}
+                await websocket.send_text(json.dumps({"type": "ERROR", "message": "Internal server error"}))
+            except Exception:
+                pass
 
-            try:
-                await websocket.send_text(json.dumps(payload))
-            except WebSocketDisconnect:
-                break
-
-            # Terminal events — close the connection
-            event_type = payload.get("type", "")
-            if event_type in ("COMPLETE", "ERROR"):
-                logger.info("ws_terminal_event", job_id=job_id, event=event_type)
-                break
-
-    except WebSocketDisconnect:
-        logger.info("ws_disconnected", job_id=job_id)
-    except Exception as exc:
-        logger.error("ws_error", job_id=job_id, error=str(exc))
+    async def client_listener() -> None:
         try:
-            await websocket.send_text(json.dumps({"type": "ERROR", "message": "Internal server error"}))
-        except Exception:
+            while True:
+                await websocket.receive_text()
+        except WebSocketDisconnect:
             pass
+
+    listener_task = asyncio.create_task(client_listener())
+    redis_task = asyncio.create_task(read_from_redis())
+
+    try:
+        # Wait until either the redis stream finishes or client disconnects
+        await asyncio.wait(
+            [listener_task, redis_task],
+            return_when=asyncio.FIRST_COMPLETED
+        )
+    except Exception as exc:
+        logger.error("ws_wait_error", job_id=job_id, error=str(exc))
     finally:
+        # Cancel tasks
+        listener_task.cancel()
+        redis_task.cancel()
+        
+        # Clean up Redis pubsub and WebSocket connection
         try:
             await pubsub.unsubscribe(channel)
-            await pubsub.close()
+            await pubsub.aclose()
         except Exception:
             pass
         try:

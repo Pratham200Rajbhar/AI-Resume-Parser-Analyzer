@@ -2,7 +2,7 @@ from typing import Any
 
 from prisma.models import ResumeAnalysis
 
-from prisma import Prisma
+from prisma import Prisma, Json
 
 
 class AnalysisRepository:
@@ -23,11 +23,11 @@ class AnalysisRepository:
             data={
                 "resumeId": resume_id,
                 "rawText": raw_text,
-                "entitiesJson": entities,
+                "entitiesJson": Json(entities),
                 "atsScore": ats_score,
-                "atsBreakdown": ats_breakdown,
-                "biasFlagsJson": bias_flags,
-                "fraudFlagsJson": fraud_flags,
+                "atsBreakdown": Json(ats_breakdown),
+                "biasFlagsJson": Json(bias_flags),
+                "fraudFlagsJson": Json(fraud_flags),
             }
         )
 

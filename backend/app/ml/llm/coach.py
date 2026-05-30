@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from typing import AsyncGenerator
 
 import structlog
 
@@ -11,54 +12,10 @@ logger = structlog.get_logger(__name__)
 
 _CACHE_TTL = 7 * 24 * 3600  # 7 days in seconds
 
-# Template fallback responses when LLM is unavailable
-_FALLBACK_RESPONSES = {
-    "rewrite": (
-        "I'm unable to connect to the AI service right now. "
-        "To rewrite your bullet points, try using strong action verbs (Led, Built, Increased, Reduced), "
-        "quantify your impact (%, $, time saved), and follow the format: "
-        "Action + Context + Result."
-    ),
-    "cover_letter": (
-        "I'm unable to generate a cover letter right now. "
-        "Structure your cover letter as: (1) Hook — your top achievement relevant to the role, "
-        "(2) 2–3 specific examples matching the JD, (3) Why this company, (4) Call to action."
-    ),
-    "skill_gap": (
-        "I'm unable to analyse skill gaps right now. "
-        "Review the job description carefully, list skills you don't have, "
-        "and search for each on Coursera or LinkedIn Learning."
-    ),
-    "interview": (
-        "I'm unable to generate interview prep right now. "
-        "Research common questions for your role, prepare STAR-method answers "
-        "(Situation, Task, Action, Result), and prepare 3 thoughtful questions for the interviewer."
-    ),
-    "default": (
-        "I'm unable to connect to the AI coaching service right now. "
-        "Please try again in a few minutes. In the meantime, review your resume against "
-        "the job description and ensure your skills and experience align with the requirements."
-    ),
-}
-
-
 def _cache_key(messages: list[dict], user_message: str) -> str:
     content = json.dumps(messages[-6:]) + user_message  # last 6 messages + new message
     return "coach:" + hashlib.sha256(content.encode()).hexdigest()
 
-
-def _detect_intent(message: str) -> str:
-    """Detect the coaching intent from the user message for fallback selection."""
-    lower = message.lower()
-    if any(kw in lower for kw in ("rewrite", "bullet", "improve", "rephrase")):
-        return "rewrite"
-    if any(kw in lower for kw in ("cover letter", "covering letter")):
-        return "cover_letter"
-    if any(kw in lower for kw in ("skill gap", "missing skill", "what skill")):
-        return "skill_gap"
-    if any(kw in lower for kw in ("interview", "question", "prepare")):
-        return "interview"
-    return "default"
 
 
 class CareerCoach:
@@ -175,8 +132,7 @@ class CareerCoach:
 
         llm = self._get_llm()
         if llm is None:
-            intent = _detect_intent(user_message)
-            return _FALLBACK_RESPONSES.get(intent, _FALLBACK_RESPONSES["default"])
+            raise RuntimeError("LLM service is not initialized or unavailable.")
 
         try:
             from langchain_core.messages import (  # noqa: PLC0415
@@ -216,5 +172,65 @@ class CareerCoach:
 
         except Exception as exc:
             logger.error("coach_llm_call_failed", error=str(exc))
-            intent = _detect_intent(user_message)
-            return _FALLBACK_RESPONSES.get(intent, _FALLBACK_RESPONSES["default"])
+            raise
+
+    async def chat_stream(
+        self,
+        session_messages: list[dict],
+        user_message: str,
+        resume_entities: dict,
+        jd_text: str | None = None,
+    ) -> AsyncGenerator[str, None]:
+        """
+        Send a message to the career coach and yield reply chunks in real time.
+        """
+        # ── 1. Check cache ────────────────────────────────────────────────────
+        try:
+            from app.services.cache import CacheService  # noqa: PLC0415
+
+            cache = CacheService()
+            cache_key = _cache_key(session_messages, user_message)
+            cached = await cache.get(cache_key)
+            if cached:
+                logger.debug("coach_cache_hit", key=cache_key[:16])
+                yield cached if isinstance(cached, str) else str(cached)
+                return
+        except Exception as exc:
+            logger.warning("coach_cache_get_failed", error=str(exc))
+
+        # ── 2. Build messages for LLM ─────────────────────────────────────────
+        system_prompt = self._build_system_prompt(resume_entities, jd_text)
+
+        llm = self._get_llm()
+        if llm is None:
+            raise RuntimeError("LLM service is not initialized or unavailable.")
+
+        try:
+            from langchain_core.messages import (  # noqa: PLC0415
+                AIMessage,
+                HumanMessage,
+                SystemMessage,
+            )
+
+            lc_messages = [SystemMessage(content=system_prompt)]
+
+            # Add conversation history (last 10 turns to stay within context limits)
+            for msg in session_messages[-10:]:
+                role = msg.get("role", "user")
+                content = msg.get("content", "")
+                if role == "user":
+                    lc_messages.append(HumanMessage(content=content))
+                elif role == "assistant":
+                    lc_messages.append(AIMessage(content=content))
+
+            lc_messages.append(HumanMessage(content=user_message))
+
+            # ── 3. Call LLM Streaming ─────────────────────────────────────────
+            async for chunk in llm.astream(lc_messages):
+                content = chunk.content if hasattr(chunk, "content") else str(chunk)
+                if content:
+                    yield content
+
+        except Exception as exc:
+            logger.error("coach_llm_stream_failed", error=str(exc))
+            raise

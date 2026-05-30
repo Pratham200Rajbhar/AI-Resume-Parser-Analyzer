@@ -21,44 +21,62 @@ export function useCoachSession(sessionId: string) {
     async (content: string) => {
       if (!sessionId || !content.trim()) return
 
-      const optimisticMessage: ChatMessage = {
+      const optimisticUser: ChatMessage = {
         role: 'user',
         content,
         timestamp: new Date().toISOString(),
       }
 
-      // Optimistically update the cache
+      const optimisticAssistant: ChatMessage = {
+        role: 'assistant',
+        content: '',
+        timestamp: new Date().toISOString(),
+      }
+
+      // Track the count before optimistic update so we can slice back on error
+      const prevLength = queryClient.getQueryData<CoachingSession>(['coaching-session', sessionId])?.messages.length ?? 0
+
       queryClient.setQueryData<CoachingSession>(['coaching-session', sessionId], (old) => {
         if (!old) return old
         return {
           ...old,
-          messages: [...old.messages, optimisticMessage],
+          messages: [...old.messages, optimisticUser, optimisticAssistant],
         }
       })
 
       setIsLoading(true)
       try {
-        const assistantMessage = await api.coaching.sendMessage(sessionId, content)
-
-        queryClient.setQueryData<CoachingSession>(['coaching-session', sessionId], (old) => {
-          if (!old) return old
-          return {
-            ...old,
-            messages: [...old.messages, assistantMessage],
-          }
+        await api.coaching.sendMessageStream(sessionId, content, (chunk) => {
+          queryClient.setQueryData<CoachingSession>(['coaching-session', sessionId], (old) => {
+            if (!old) return old
+            const msgs = [...old.messages]
+            const lastMsg = msgs[msgs.length - 1]
+            if (lastMsg && lastMsg.role === 'assistant') {
+              msgs[msgs.length - 1] = {
+                ...lastMsg,
+                content: lastMsg.content + chunk,
+              }
+            }
+            return {
+              ...old,
+              messages: msgs,
+            }
+          })
         })
       } catch (err) {
-        // Rollback optimistic update on error
+        // Rollback by slicing back to the pre-optimistic length
         queryClient.setQueryData<CoachingSession>(['coaching-session', sessionId], (old) => {
           if (!old) return old
           return {
             ...old,
-            messages: old.messages.filter((m) => m !== optimisticMessage),
+            messages: old.messages.slice(0, prevLength),
           }
         })
         throw err
       } finally {
         setIsLoading(false)
+        queryClient.invalidateQueries({ queryKey: ['coaching-session', sessionId] })
+        queryClient.invalidateQueries({ queryKey: ['coaching-sessions'] })
       }
     },
     [sessionId, queryClient]

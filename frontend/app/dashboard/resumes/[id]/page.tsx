@@ -47,6 +47,10 @@ export default function ResumeDetailPage() {
     queryKey: ['resume', resumeId],
     queryFn: () => api.resumes.get(resumeId),
     enabled: !!resumeId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status
+      return status && status !== 'ANALYZED' && status !== 'FAILED' ? 3000 : false
+    },
   })
 
   const { data: analysis, isLoading: analysisLoading } = useAnalysis(resumeId)

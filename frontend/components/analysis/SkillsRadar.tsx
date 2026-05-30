@@ -31,9 +31,9 @@ export function SkillsRadar({ skills }: SkillsRadarProps) {
     // Not enough categories for a radar — show a simple list
     return (
       <div className="flex flex-wrap gap-2">
-        {skills.slice(0, 20).map((skill) => (
+        {skills.slice(0, 20).map((skill, i) => (
           <span
-            key={skill.raw}
+            key={`${skill.raw}-${i}`}
             className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-medium"
           >
             {skill.normalized}

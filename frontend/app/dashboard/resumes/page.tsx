@@ -33,6 +33,16 @@ export default function ResumesPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<UploadStatus | 'ALL'>('ALL')
+
+  function handleSearchChange(value: string) {
+    setSearch(value)
+    setPage(1)
+  }
+
+  function handleStatusFilterChange(value: UploadStatus | 'ALL') {
+    setStatusFilter(value)
+    setPage(1)
+  }
   const [uploadOpen, setUploadOpen] = useState(false)
 
   const { data, isLoading } = useQuery({
@@ -82,7 +92,7 @@ export default function ResumesPage() {
               <Input
                 placeholder="Search by filename..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-9"
               />
             </div>
@@ -90,7 +100,7 @@ export default function ResumesPage() {
               {STATUS_FILTERS.map((f) => (
                 <button
                   key={f.value}
-                  onClick={() => setStatusFilter(f.value)}
+                  onClick={() => handleStatusFilterChange(f.value)}
                   className={cn(
                     'px-3 py-1.5 rounded-full text-xs font-medium transition-colors',
                     statusFilter === f.value

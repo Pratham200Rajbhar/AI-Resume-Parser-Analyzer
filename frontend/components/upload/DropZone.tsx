@@ -75,7 +75,7 @@ export function DropZone({ compact = false, onComplete }: DropZoneProps) {
           <Loader2 className="w-5 h-5 text-indigo-600 animate-spin flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-900">
-              {isUploading ? 'Uploading...' : (jobEvent ? STEP_LABELS[jobEvent.event] : 'Processing...')}
+              {isUploading ? 'Uploading...' : (jobEvent ? STEP_LABELS[jobEvent.type] : 'Processing...')}
             </p>
             {jobEvent?.message && (
               <p className="text-xs text-gray-500 truncate">{jobEvent.message}</p>
@@ -95,7 +95,7 @@ export function DropZone({ compact = false, onComplete }: DropZoneProps) {
             {(['JOB_STARTED', 'PARSING_COMPLETE', 'ENTITIES_READY', 'ANALYSIS_READY', 'COMPLETE'] as const).map(
               (step) => {
                 const steps = ['JOB_STARTED', 'PARSING_COMPLETE', 'ENTITIES_READY', 'ANALYSIS_READY', 'COMPLETE']
-                const currentIdx = jobEvent ? steps.indexOf(jobEvent.event) : -1
+                const currentIdx = jobEvent ? steps.indexOf(jobEvent.type) : -1
                 const stepIdx = steps.indexOf(step)
                 const isDone = currentIdx > stepIdx
                 const isCurrent = currentIdx === stepIdx

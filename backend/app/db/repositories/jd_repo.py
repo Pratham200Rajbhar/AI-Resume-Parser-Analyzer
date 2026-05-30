@@ -1,6 +1,6 @@
 from prisma.models import JdMatchResult, JobDescription
 
-from prisma import Prisma
+from prisma import Prisma, Json
 
 
 class JdRepository:
@@ -60,9 +60,9 @@ class MatchRepository:
             "resumeId": resume_id,
             "jobDescriptionId": jd_id,
             "matchScore": match_score,
-            "matchedSkills": matched_skills,
-            "gapSkills": gap_skills,
-            "keywordReport": keyword_report,
+            "matchedSkills": Json(matched_skills),
+            "gapSkills": Json(gap_skills),
+            "keywordReport": Json(keyword_report),
         }
         return await self.db.jdmatchresult.upsert(
             where={"resumeId_jobDescriptionId": {"resumeId": resume_id, "jobDescriptionId": jd_id}},

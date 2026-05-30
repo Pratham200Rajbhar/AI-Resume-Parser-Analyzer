@@ -46,6 +46,8 @@ class MatchResponse(BaseModel):
     matched_skills: list
     gap_skills: list
     keyword_report: dict
+    created_at: datetime
+    job_description: dict | None = None
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
@@ -172,4 +174,6 @@ async def match_jd(
         matched_skills=match_record.matchedSkills,
         gap_skills=match_record.gapSkills,
         keyword_report=match_record.keywordReport,
+        created_at=match_record.createdAt,
+        job_description={"id": jd.id, "title": jd.title, "company": jd.company},
     )

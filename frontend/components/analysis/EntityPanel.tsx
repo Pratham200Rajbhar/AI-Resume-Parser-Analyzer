@@ -11,24 +11,30 @@ interface EntityPanelProps {
 }
 
 export function EntityPanel({ entities }: EntityPanelProps) {
+  const experience = entities.experience ?? []
+  const education = entities.education ?? []
+  const skills = entities.skills ?? []
+  const certifications = entities.certifications ?? []
+  const projects = entities.projects ?? []
+
   return (
     <Tabs defaultValue="contact">
       <TabsList className="flex-wrap h-auto gap-1">
         <TabsTrigger value="contact">Contact</TabsTrigger>
         <TabsTrigger value="experience">
-          Experience ({entities.experience.length})
+          Experience ({experience.length})
         </TabsTrigger>
         <TabsTrigger value="education">
-          Education ({entities.education.length})
+          Education ({education.length})
         </TabsTrigger>
         <TabsTrigger value="skills">
-          Skills ({entities.skills.length})
+          Skills ({skills.length})
         </TabsTrigger>
         <TabsTrigger value="certifications">
-          Certs ({entities.certifications.length})
+          Certs ({certifications.length})
         </TabsTrigger>
         <TabsTrigger value="projects">
-          Projects ({entities.projects.length})
+          Projects ({projects.length})
         </TabsTrigger>
       </TabsList>
 
@@ -59,11 +65,11 @@ export function EntityPanel({ entities }: EntityPanelProps) {
       </TabsContent>
 
       <TabsContent value="experience" className="mt-4">
-        {entities.experience.length === 0 ? (
+        {experience.length === 0 ? (
           <p className="text-sm text-gray-400">No experience entries found</p>
         ) : (
           <div className="space-y-4">
-            {entities.experience.map((exp, i) => (
+            {experience.map((exp, i) => (
               <div key={i} className="flex gap-3">
                 <div className="flex-shrink-0 mt-1">
                   <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center">
@@ -96,11 +102,11 @@ export function EntityPanel({ entities }: EntityPanelProps) {
       </TabsContent>
 
       <TabsContent value="education" className="mt-4">
-        {entities.education.length === 0 ? (
+        {education.length === 0 ? (
           <p className="text-sm text-gray-400">No education entries found</p>
         ) : (
           <div className="space-y-4">
-            {entities.education.map((edu, i) => (
+            {education.map((edu, i) => (
               <div key={i} className="flex gap-3">
                 <div className="flex-shrink-0 mt-1">
                   <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center">
@@ -126,11 +132,11 @@ export function EntityPanel({ entities }: EntityPanelProps) {
       </TabsContent>
 
       <TabsContent value="skills" className="mt-4">
-        {entities.skills.length === 0 ? (
+        {skills.length === 0 ? (
           <p className="text-sm text-gray-400">No skills extracted</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {entities.skills.map((skill, i) => (
+            {skills.map((skill, i) => (
               <span
                 key={i}
                 className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-medium"
@@ -147,11 +153,11 @@ export function EntityPanel({ entities }: EntityPanelProps) {
       </TabsContent>
 
       <TabsContent value="certifications" className="mt-4">
-        {entities.certifications.length === 0 ? (
+        {certifications.length === 0 ? (
           <p className="text-sm text-gray-400">No certifications found</p>
         ) : (
           <div className="space-y-2">
-            {entities.certifications.map((cert, i) => (
+            {certifications.map((cert, i) => (
               <div key={i} className="flex items-center gap-2">
                 <Award className="w-4 h-4 text-amber-500 flex-shrink-0" />
                 <span className="text-sm text-gray-700">{cert}</span>
@@ -162,11 +168,11 @@ export function EntityPanel({ entities }: EntityPanelProps) {
       </TabsContent>
 
       <TabsContent value="projects" className="mt-4">
-        {entities.projects.length === 0 ? (
+        {projects.length === 0 ? (
           <p className="text-sm text-gray-400">No projects found</p>
         ) : (
           <div className="space-y-4">
-            {entities.projects.map((project, i) => (
+            {projects.map((project, i) => (
               <div key={i} className="p-3 bg-gray-50 rounded-lg space-y-2">
                 <div className="flex items-center gap-2">
                   <Code className="w-4 h-4 text-gray-400" />
@@ -175,9 +181,9 @@ export function EntityPanel({ entities }: EntityPanelProps) {
                 {project.description && (
                   <p className="text-xs text-gray-600 leading-relaxed">{project.description}</p>
                 )}
-                {project.technologies.length > 0 && (
+                {(project.technologies?.length ?? 0) > 0 && (
                   <div className="flex flex-wrap gap-1">
-                    {project.technologies.map((tech, j) => (
+                    {project.technologies?.map((tech, j) => (
                       <Badge key={j} variant="secondary" className="text-xs">
                         {tech}
                       </Badge>

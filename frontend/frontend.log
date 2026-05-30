@@ -1,0 +1,48 @@
+
+> resume-analyzer-frontend@1.0.0 dev
+> next dev
+
+  ▲ Next.js 14.2.3
+  - Local:        http://localhost:3000
+
+ ✓ Starting...
+ ✓ Ready in 1710ms
+   Reload env: .env.local
+ ○ Compiling / ...
+ ✓ Compiled / in 2.9s (810 modules)
+ GET / 200 in 3087ms
+ ✓ Compiled in 150ms (368 modules)
+ ○ Compiling /register ...
+ ✓ Compiled /register in 548ms (853 modules)
+ GET /register 200 in 674ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 1027ms (1070 modules)
+ ✓ Compiled /dashboard/resumes in 391ms (1084 modules)
+ ✓ Compiled /dashboard/jds in 355ms (1100 modules)
+ ✓ Compiled /dashboard/batch in 450ms (1124 modules)
+ ○ Compiling /dashboard/coach ...
+ ✓ Compiled /dashboard/coach in 1853ms (1673 modules)
+ GET /dashboard/coach 200 in 134ms
+ ○ Compiling /dashboard/workspace ...
+ ✓ Compiled /dashboard/workspace in 628ms (1686 modules)
+ GET /dashboard/workspace 200 in 106ms
+ GET /dashboard 200 in 37ms
+ GET /dashboard/resumes 200 in 17ms
+ ✓ Compiled in 511ms (815 modules)
+ ✓ Compiled in 216ms (815 modules)
+ ✓ Compiled in 486ms (1695 modules)
+ ○ Compiling /dashboard/resumes/[id] ...
+ ✓ Compiled /dashboard/resumes/[id] in 3s (2761 modules)
+ GET /dashboard/resumes 200 in 94ms
+ GET /dashboard/resumes 200 in 15ms
+ ✓ Compiled / in 454ms (1417 modules)
+ GET / 200 in 574ms
+ GET / 200 in 15ms
+ ✓ Compiled /dashboard/jds in 381ms (1421 modules)
+ GET /dashboard/jds 200 in 520ms
+ GET /dashboard/workspace 200 in 30ms
+ ✓ Compiled /dashboard/batch in 307ms (1153 modules)
+ GET /dashboard/batch 200 in 173ms
+ ○ Compiling /dashboard/batch/[id] ...
+ ✓ Compiled /dashboard/batch/[id] in 839ms (1964 modules)
+ ✓ Compiled /dashboard/coach in 431ms (894 modules)

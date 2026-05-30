@@ -213,7 +213,7 @@ export default function CoachPage() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {(() => {
                       const linked = analyzedResumes.find(
-                        (r) => r.analysis?.id === selectedSession.resumeAnalysisId || r.id === selectedSession.resumeAnalysisId
+                        (r) => r.analysis?.id === selectedSession.resumeAnalysisId
                       )
                       return linked ? (
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md truncate max-w-[160px]" title={linked.fileName}>

@@ -11,7 +11,7 @@ export function SkillGapChart({ matchResult }: SkillGapChartProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-6">
-        <ScoreGauge score={Math.round(matchResult.matchScore)} size={100} label="Match" />
+        <ScoreGauge score={Math.round(matchResult.matchScore * 100)} size={100} label="Match" />
         <div className="flex-1 space-y-1">
           <p className="text-sm font-medium text-gray-900">
             {matchResult.jobDescription?.title ?? 'Job Match'}

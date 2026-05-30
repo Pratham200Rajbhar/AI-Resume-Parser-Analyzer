@@ -335,6 +335,62 @@ export const api = {
       return response.data
     },
 
+    sendMessageStream: async (
+      sessionId: string,
+      message: string,
+      onChunk: (chunk: string) => void
+    ): Promise<void> => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
+      const response = await fetch(`${BASE_URL}/api/v1/coaching/sessions/${sessionId}/messages/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ message }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to send message')
+      }
+
+      if (!response.body) {
+        throw new Error('No response body')
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        
+        buffer = lines.pop() ?? ''
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed) continue
+          if (trimmed.startsWith('data: ')) {
+            const dataStr = trimmed.substring(6)
+            try {
+              const parsed = JSON.parse(dataStr)
+              if (parsed.content) {
+                onChunk(parsed.content)
+              } else if (parsed.error) {
+                throw new Error(parsed.error)
+              }
+            } catch (err) {
+              console.error('Failed to parse SSE line:', trimmed, err)
+            }
+          }
+        }
+      }
+    },
+
     updateSession: async (sessionId: string, title: string): Promise<CoachingSession> => {
       const response = await axiosInstance.patch<CoachingSession>(
         `/coaching/sessions/${sessionId}`,

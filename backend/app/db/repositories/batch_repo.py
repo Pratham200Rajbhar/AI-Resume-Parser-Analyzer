@@ -1,6 +1,6 @@
 from prisma.models import BatchJob, CoachingSession
 
-from prisma import Prisma
+from prisma import Prisma, Json
 
 
 class BatchRepository:
@@ -30,7 +30,7 @@ class BatchRepository:
     async def finalize(self, batch_id: str, ranked_results: list, status: str) -> BatchJob:
         return await self.db.batchjob.update(
             where={"id": batch_id},
-            data={"status": status, "rankedResults": ranked_results},
+            data={"status": status, "rankedResults": Json(ranked_results)},
         )
 
     async def list_by_user(self, user_id: str, skip: int = 0, take: int = 20) -> list[BatchJob]:
@@ -59,7 +59,7 @@ class CoachingRepository:
                 "title": title,
                 "resumeAnalysisId": resume_analysis_id,
                 "jobDescriptionId": jd_id,
-                "messages": [],
+                "messages": Json([]),
             }
         )
 
@@ -68,7 +68,7 @@ class CoachingRepository:
 
     async def append_message(self, session_id: str, messages: list) -> CoachingSession:
         return await self.db.coachingsession.update(
-            where={"id": session_id}, data={"messages": messages}
+            where={"id": session_id}, data={"messages": Json(messages)}
         )
 
     async def list_by_user(self, user_id: str, skip: int = 0, take: int = 20) -> list[CoachingSession]:

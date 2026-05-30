@@ -6,7 +6,7 @@ TEST: batch_ranker / edge_cases
   OK — empty list returns []
 
 [2] Single candidate
-  OK — single candidate ranked: {'resume_id': 'r1', 'candidate_name': 'Pratham Rajbhar', 'composite_score': 41.25, 'component_scores': {'ats_score': 75, 'match_score': 0.0, 'skills_score': 0.15, 'experience_score': 0.0, 'education_score': 0.0}, 'rank': 1}
+  OK — single candidate ranked: {'resume_id': 'r1', 'candidate_name': 'Pratham Rajbhar', 'file_name': '', 'entities': {'skills': [{'raw': 'Python'}, {'raw': 'FastAPI'}, {'raw': 'React.js'}], 'experience': [{'role': 'Dev', 'company': 'X', 'duration': '2022-2024'}], 'education': [{'degree': 'B.Tech', 'institution': 'GU', 'year': '2024'}]}, 'composite_score': 41.25, 'ats_score': 75, 'match_score': 65.0, 'skills_score': 15.0, 'experience_score': 0.0, 'education_score': 0.0, 'component_scores': {'ats_score': 75, 'match_score': 0.0, 'skills_score': 0.15, 'experience_score': 0.0, 'education_score': 0.0}, 'rank': 1}
 
 [3] No JD embedding — ATS score path
   OK — A ranked first with ATS score 90

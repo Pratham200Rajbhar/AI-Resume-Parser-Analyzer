@@ -2,8 +2,8 @@ import asyncio
 import json
 
 import structlog
+from prisma import Json
 
-from app.tasks.celery_app import celery_app
 
 logger = structlog.get_logger(__name__)
 
@@ -98,11 +98,11 @@ async def _process_batch_async(
                         where={"resumeId": resume_id},
                         data={
                             "rawText": raw_text,
-                            "entitiesJson": entities,
+                            "entitiesJson": Json(entities),
                             "atsScore": ats_result["score"],
-                            "atsBreakdown": breakdown_with_suggestions,
-                            "biasFlagsJson": bias_flags,
-                            "fraudFlagsJson": fraud_flags,
+                            "atsBreakdown": Json(breakdown_with_suggestions),
+                            "biasFlagsJson": Json(bias_flags),
+                            "fraudFlagsJson": Json(fraud_flags),
                         },
                     )
                 else:
@@ -110,11 +110,11 @@ async def _process_batch_async(
                         data={
                             "resumeId": resume_id,
                             "rawText": raw_text,
-                            "entitiesJson": entities,
+                            "entitiesJson": Json(entities),
                             "atsScore": ats_result["score"],
-                            "atsBreakdown": breakdown_with_suggestions,
-                            "biasFlagsJson": bias_flags,
-                            "fraudFlagsJson": fraud_flags,
+                            "atsBreakdown": Json(breakdown_with_suggestions),
+                            "biasFlagsJson": Json(bias_flags),
+                            "fraudFlagsJson": Json(fraud_flags),
                         }
                     )
 
@@ -127,6 +127,7 @@ async def _process_batch_async(
 
                 candidates.append({
                     "resume_id": resume_id,
+                    "file_name": resume.fileName,
                     "candidate_name": entities.get("name", "Unknown"),
                     "entities": entities,
                     "ats_score": ats_result["score"],
@@ -160,7 +161,7 @@ async def _process_batch_async(
 
         await db.batchjob.update(
             where={"id": batch_id},
-            data={"status": "COMPLETE", "rankedResults": ranked},
+            data={"status": "COMPLETE", "rankedResults": Json(ranked)},
         )
 
         _publish_sync(channel, "COMPLETE", {"batch_id": batch_id, "ranked_count": len(ranked)})
@@ -179,15 +180,10 @@ async def _process_batch_async(
     finally:
         await db.disconnect()
 
-
-@celery_app.task(bind=True, name="tasks.process_batch", max_retries=2)
-def process_batch(
-    self,
+def run_process_batch(
     batch_id: str,
     resume_ids: list[str],
     jd_id: str | None = None,
 ) -> dict:
-    try:
-        return asyncio.run(_process_batch_async(batch_id, resume_ids, jd_id))
-    except Exception as exc:
-        raise self.retry(exc=exc, countdown=60)
+    """Synchronous entry point to run the async batch resume processing pipeline in a thread pool."""
+    return asyncio.run(_process_batch_async(batch_id, resume_ids, jd_id))

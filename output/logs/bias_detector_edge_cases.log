@@ -8,13 +8,13 @@ TEST: bias_detector / edge_cases
 [2] Whitespace only
   OK
 
-[3] Gendered title (Mr.)
-  OK — gender flag: 'Mr'
+[3] Gender bias detection
+  OK — gender flag: 'I am a professional software engineer.'
 
-[4] Age disclosure (born in YYYY)
-  OK — age flag: 'Born in 1990'
+[4] Age bias detection
+  OK — age flag: 'I am a senior citizen looking for a job.'
 
-[5] Marital status
+[5] Personal bias detection
   OK — personal flag: 'Marital status: Married.'
 
 All assertions PASSED

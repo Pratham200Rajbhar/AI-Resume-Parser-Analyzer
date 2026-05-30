@@ -7,6 +7,9 @@ import { Toaster } from '@/components/ui/toaster'
 
 function AuthInitializer() {
   const initialize = useAuthStore((s) => s.initialize)
+  const setUser = useAuthStore((s) => s.setUser)
+  const accessToken = useAuthStore((s) => s.accessToken)
+  const user = useAuthStore((s) => s.user)
   const initialized = useRef(false)
 
   useEffect(() => {
@@ -15,6 +18,17 @@ function AuthInitializer() {
       initialize()
     }
   }, [initialize])
+
+  // Fetch user profile on page load when token exists but user isn't loaded yet
+  useEffect(() => {
+    if (accessToken && !user) {
+      import('@/lib/api').then(({ api }) => {
+        api.auth.me().then(setUser).catch(() => {
+          // Token is invalid — the axios interceptor will redirect to /login
+        })
+      })
+    }
+  }, [accessToken, user, setUser])
 
   return null
 }

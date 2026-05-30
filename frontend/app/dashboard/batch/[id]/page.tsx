@@ -254,7 +254,7 @@ function ScoreCell({ score }: { score: number }) {
 }
 
 function RankRow({ candidate }: { candidate: RankedCandidate }) {
-  const name = candidate.entities.name ?? candidate.fileName
+  const name = candidate.entities?.name ?? candidate.fileName ?? 'Unknown'
 
   return (
     <tr className="border-b border-gray-50 hover:bg-gray-50 transition-colors">

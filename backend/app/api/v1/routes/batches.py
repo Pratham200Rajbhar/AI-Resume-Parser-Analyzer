@@ -3,7 +3,7 @@ import io
 from datetime import datetime
 
 import structlog
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from prisma.models import User
 from pydantic import BaseModel, ConfigDict
@@ -83,6 +83,7 @@ async def create_batch(
 @router.post("/{batch_id}/upload", response_model=BatchUploadResponse, status_code=status.HTTP_202_ACCEPTED)
 async def upload_batch_files(
     batch_id: str,
+    background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
     db: Prisma = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -136,16 +137,18 @@ async def upload_batch_files(
         data={"totalCount": len(resume_ids)},
     )
 
-    from app.tasks.batch_task import process_batch  # noqa: PLC0415
+    from app.tasks.batch_task import run_process_batch  # noqa: PLC0415
 
-    task = process_batch.delay(
+    job_id = batch_id
+    background_tasks.add_task(
+        run_process_batch,
         batch_id=batch_id,
         resume_ids=resume_ids,
         jd_id=batch.jobDescriptionId,
     )
 
-    logger.info("batch_upload", batch_id=batch_id, count=len(resume_ids), task_id=task.id)
-    return BatchUploadResponse(batch_id=batch_id, accepted=len(resume_ids), job_id=task.id)
+    logger.info("batch_upload", batch_id=batch_id, count=len(resume_ids), job_id=job_id)
+    return BatchUploadResponse(batch_id=batch_id, accepted=len(resume_ids), job_id=job_id)
 
 
 @router.get("/", response_model=list[BatchResponse])
