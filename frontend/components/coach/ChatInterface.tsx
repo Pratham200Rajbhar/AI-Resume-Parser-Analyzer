@@ -5,8 +5,8 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { ChatMessage } from '@/types'
 import { Button } from '@/components/ui/button'
-import { cn, formatDate } from '@/lib/utils'
-import { Send, Bot, User } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Send, Bot, User, Sparkles } from 'lucide-react'
 
 interface ChatInterfaceProps {
   messages: ChatMessage[]
@@ -18,15 +18,15 @@ interface ChatInterfaceProps {
 
 function TypingIndicator() {
   return (
-    <div className="flex items-end gap-2">
-      <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-        <Bot className="w-4 h-4 text-indigo-600" />
+    <div className="flex items-start gap-3.5 animate-pulse">
+      <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/20 border border-blue-100/60 dark:border-blue-900/30 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400">
+        <Sparkles className="w-4 h-4" />
       </div>
-      <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-4 py-3">
+      <div className="glass rounded-2xl px-5 py-3 border border-white/5">
         <div className="flex gap-1 items-center h-4">
-          <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
-          <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
-          <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+          <span className="w-1.5 h-1.5 bg-blue-500/80 rounded-full animate-bounce [animation-delay:0ms]" />
+          <span className="w-1.5 h-1.5 bg-blue-500/80 rounded-full animate-bounce [animation-delay:150ms]" />
+          <span className="w-1.5 h-1.5 bg-blue-500/80 rounded-full animate-bounce [animation-delay:300ms]" />
         </div>
       </div>
     </div>
@@ -41,45 +41,47 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   }
 
   return (
-    <div className={cn('flex items-end gap-2', isUser && 'flex-row-reverse')}>
+    <div className={cn('flex items-start gap-3.5 py-1', isUser && 'flex-row-reverse')}>
       <div
         className={cn(
-          'w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0',
-          isUser ? 'bg-indigo-600' : 'bg-indigo-100'
+          'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border',
+          isUser
+            ? 'bg-blue-600 border-blue-500 text-white shadow-sm'
+            : 'glass border-white/5 text-blue-400 shadow-sm'
         )}
       >
         {isUser ? (
-          <User className="w-4 h-4 text-white" />
+          <User className="w-4.5 h-4.5" />
         ) : (
-          <Bot className="w-4 h-4 text-indigo-600" />
+          <Bot className="w-4.5 h-4.5" />
         )}
       </div>
-      <div className={cn('max-w-[75%] space-y-1', isUser && 'items-end flex flex-col')}>
+      <div className={cn('max-w-[78%] space-y-1.5', isUser && 'items-end flex flex-col')}>
         <div
           className={cn(
-            'px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
+            'px-5 py-3 rounded-2xl text-sm leading-relaxed font-sans shadow-none',
             isUser
-              ? 'bg-indigo-600 text-white rounded-br-sm whitespace-pre-wrap'
-              : 'bg-gray-100 text-gray-900 rounded-bl-sm'
+              ? 'bg-blue-600/15 border border-blue-500/20 text-slate-100 rounded-tr-none whitespace-pre-wrap'
+              : 'bg-transparent text-foreground border-none px-1'
           )}
         >
           {isUser ? (
             message.content
           ) : (
             <div
-              className="prose prose-sm max-w-none text-gray-900 break-words space-y-2
-                [&>p]:leading-relaxed [&>p]:mb-2 [&>p:last-child]:mb-0
-                [&>ul]:list-disc [&>ul]:pl-4 [&>ul]:space-y-1 [&>ul]:mb-2
-                [&>ol]:list-decimal [&>ol]:pl-4 [&>ol]:space-y-1 [&>ol]:mb-2
-                [&>li]:text-sm
-                [&>h1]:text-base [&>h1]:font-bold [&>h1]:mt-3 [&>h1]:mb-1
-                [&>h2]:text-sm [&>h2]:font-bold [&>h2]:mt-3 [&>h2]:mb-1
-                [&>h3]:text-sm [&>h3]:font-semibold [&>h3]:mt-2 [&>h3]:mb-1
-                [&>code]:bg-gray-200 [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-xs [&>code]:font-mono
-                [&>pre]:bg-gray-800 [&>pre]:text-gray-100 [&>pre]:p-3 [&>pre]:rounded-lg [&>pre]:overflow-x-auto [&>pre]:my-2
-                [&>pre>code]:bg-transparent [&>pre>code]:p-0 [&>pre>code]:text-xs
-                [&>blockquote]:border-l-4 [&>blockquote]:border-gray-300 [&>blockquote]:pl-3 [&>blockquote]:italic [&>blockquote]:text-gray-600
-                [&>hr]:border-gray-200 [&>hr]:my-2
+              className="prose prose-sm max-w-none text-foreground break-words space-y-2.5 font-normal
+                [&>p]:leading-relaxed [&>p]:mb-2.5 [&>p:last-child]:mb-0
+                [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:space-y-1.5 [&>ul]:mb-2.5
+                [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:space-y-1.5 [&>ol]:mb-2.5
+                [&>li]:text-sm [&>li]:text-gray-800 dark:[&>li]:text-gray-200
+                [&>h1]:text-base [&>h1]:font-semibold [&>h1]:mt-4 [&>h1]:mb-1.5 [&>h1]:font-display
+                [&>h2]:text-sm [&>h2]:font-semibold [&>h2]:mt-3.5 [&>h2]:mb-1.5 [&>h2]:font-display
+                [&>h3]:text-sm [&>h3]:font-semibold [&>h3]:mt-3 [&>h3]:mb-1 [&>h3]:font-display
+                [&>code]:bg-muted dark:[&>code]:bg-slate-800 [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-xs [&>code]:font-mono [&>code]:text-blue-600 dark:[&>code]:text-blue-400
+                [&>pre]:bg-gray-900 [&>pre]:text-gray-100 [&>pre]:p-4 [&>pre]:rounded-2xl [&>pre]:overflow-x-auto [&>pre]:my-3 [&>pre]:border [&>pre]:border-gray-800
+                [&>pre>code]:bg-transparent [&>pre>code]:p-0 [&>pre>code]:text-xs [&>pre>code]:text-gray-200
+                [&>blockquote]:border-l-4 [&>blockquote]:border-blue-200 [&>blockquote]:pl-4 [&>blockquote]:italic [&>blockquote]:text-gray-500 dark:[&>blockquote]:text-gray-400
+                [&>hr]:border-border [&>hr]:my-3
               "
             >
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -88,8 +90,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             </div>
           )}
         </div>
-        <p className="text-xs text-gray-400 px-1">
-          {new Date(message.timestamp).toLocaleTimeString([], {
+        <p className="text-[10px] text-slate-500 font-medium px-2.5 font-sans">
+          {new Date(message.timestamp ?? new Date()).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
           })}
@@ -148,15 +150,17 @@ export function ChatInterface({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full glass-card border border-white/5 shadow-lg overflow-hidden">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5 scrollbar-thin">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center py-8">
-            <Bot className="w-10 h-10 text-indigo-200 mb-3" />
-            <p className="text-sm font-medium text-gray-500">Start the conversation</p>
-            <p className="text-xs text-gray-400 mt-1">
-              Ask for resume feedback, cover letter help, or interview prep
+          <div className="flex flex-col items-center justify-center h-full text-center py-12 max-w-sm mx-auto">
+            <div className="w-14 h-14 bg-blue-50 dark:bg-blue-950/30 rounded-full flex items-center justify-center mb-4 border border-blue-100/60 dark:border-blue-900/20 text-blue-600 dark:text-blue-400">
+              <Bot className="w-7 h-7" />
+            </div>
+            <h3 className="font-display text-sm font-semibold text-foreground">AI Career Coach Session</h3>
+            <p className="text-xs text-muted-foreground mt-1 font-sans leading-relaxed">
+              Ask for active resume updates, cover letter formulations, behavioral mocks, or industry salary trends.
             </p>
           </div>
         ) : (
@@ -170,9 +174,9 @@ export function ChatInterface({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-3 border-t border-gray-100">
-        <div className="flex items-end gap-2 bg-gray-50 rounded-xl border border-gray-200 px-3 py-2 focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-400 transition-colors">
+      {/* Input Dock */}
+      <div className="p-4 border-t border-white/5 bg-transparent">
+        <div className="flex items-end gap-2 bg-white/5 hover:bg-white/10 dark:bg-slate-950/45 rounded-2xl border border-white/5 hover:border-white/10 focus-within:border-blue-500/40 focus-within:ring-1 focus-within:ring-blue-500/30 transition-all duration-200 px-4 py-3">
           <textarea
             ref={textareaRef}
             value={input}
@@ -180,7 +184,7 @@ export function ChatInterface({
             onKeyDown={handleKeyDown}
             placeholder="Type a message... (Enter to send, Shift+Enter for newline)"
             rows={1}
-            className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:outline-none min-h-[24px] max-h-[120px]"
+            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none min-h-[22px] max-h-[120px] font-sans font-normal leading-relaxed"
             disabled={isLoading}
             aria-label="Chat message input"
           />
@@ -188,14 +192,14 @@ export function ChatInterface({
             size="sm"
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
-            className="flex-shrink-0 h-8 w-8 p-0 rounded-lg"
+            className="flex-shrink-0 h-8.5 w-8.5 p-0 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-sm"
             aria-label="Send message"
           >
             <Send className="w-4 h-4" />
           </Button>
         </div>
-        <p className="text-xs text-gray-400 mt-1 text-right">
-          Enter to send · Shift+Enter for newline
+        <p className="text-[10px] text-muted-foreground mt-1.5 text-right font-medium font-sans px-2 select-none">
+          Press Enter to send · Shift + Enter for newline
         </p>
       </div>
     </div>

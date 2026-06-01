@@ -14,30 +14,50 @@ model User {
   email     String   @unique
   password  String
   fullName  String?
+  avatarUrl String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  resumes          Resume[]
-  batches          BatchJob[]
-  sessions         CoachingSession[]
-  jobDescriptions  JobDescription[]
+  resumes              Resume[]
+  batches              BatchJob[]
+  sessions             CoachingSession[]
+  jobDescriptions      JobDescription[]
+  workspaceCandidates  WorkspaceCandidate[]
+  workspaceColumns     WorkspaceColumn[]
+  preferences          UserPreferences?
+  apiKeys              ApiKey[]
+  notifications        Notification[]
+  jobApplications      JobApplication[]
+  coverLetters         CoverLetter[]
+  shareLinks           ShareLink[]
+  teamMemberships      TeamMember[]
+  ownedTeams           Team[]
+  learningPlans        LearningPlan[]
 }
 
 model Resume {
-  id        String       @id @default(uuid())
-  userId    String
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fileName  String
-  filePath  String
-  fileType  String
-  fileSize  Int
-  fileHash  String
-  status    UploadStatus @default(PENDING)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id           String       @id @default(uuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName     String
+  filePath     String
+  fileType     String
+  fileSize     Int
+  fileHash     String
+  status       UploadStatus @default(PENDING)
+  parentResumeId String?
+  parentResume   Resume?    @relation("ResumeVersions", fields: [parentResumeId], references: [id])
+  versions       Resume[]   @relation("ResumeVersions")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   analysis     ResumeAnalysis?
   matchResults JdMatchResult[]
+  rewrites     ResumeRewrite[]
+  shareLinks   ShareLink[]
+  workspaceCandidates WorkspaceCandidate[]
+  coverLetters CoverLetter[]
+  jobApplications JobApplication[]
 
   @@index([userId])
   @@index([fileHash])
@@ -56,6 +76,18 @@ model ResumeAnalysis {
   createdAt     DateTime @default(now())
 }
 
+model ResumeRewrite {
+  id         String   @id @default(uuid())
+  resumeId   String
+  resume     Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  original   String
+  rewritten  String
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([resumeId])
+}
+
 model JobDescription {
   id              String   @id @default(uuid())
   userId          String
@@ -66,7 +98,10 @@ model JobDescription {
   embeddingVector Float[]
   createdAt       DateTime @default(now())
 
-  matchResults JdMatchResult[]
+  matchResults    JdMatchResult[]
+  workspaceCandidates WorkspaceCandidate[]
+  coverLetters    CoverLetter[]
+  jobApplications JobApplication[]
 
   @@index([userId])
 }
@@ -89,17 +124,17 @@ model JdMatchResult {
 }
 
 model BatchJob {
-  id             String      @id @default(uuid())
-  userId         String
-  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String      @id @default(uuid())
+  userId           String
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   jobDescriptionId String?
-  totalCount     Int
-  completedCount Int         @default(0)
-  failedCount    Int         @default(0)
-  status         BatchStatus @default(IN_PROGRESS)
-  rankedResults  Json?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  totalCount       Int
+  completedCount   Int         @default(0)
+  failedCount      Int         @default(0)
+  status           BatchStatus @default(IN_PROGRESS)
+  rankedResults    Json?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   @@index([userId])
 }
@@ -118,6 +153,175 @@ model CoachingSession {
   @@index([userId])
 }
 
+model WorkspaceCandidate {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeId         String
+  resume           Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  jobDescriptionId String?
+  jobDescription   JobDescription? @relation(fields: [jobDescriptionId], references: [id])
+  name             String
+  atsScore         Int      @default(0)
+  matchScore       Int      @default(0)
+  topSkills        Json     @default("[]")
+  notes            String   @default("")
+  column           String   @default("shortlisted")
+  position         Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model WorkspaceColumn {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  slug      String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model UserPreferences {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultLlmProvider  String   @default("openai")
+  defaultExportFormat String   @default("pdf")
+  emailAnalysisComplete Boolean @default(true)
+  emailBatchDone        Boolean @default(true)
+  emailDeadlineReminder Boolean @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  keyHash     String    @unique
+  keyPrefix   String
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String
+  read      Boolean          @default(false)
+  link      String?
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+  @@index([userId, read])
+}
+
+model JobApplication {
+  id               String            @id @default(uuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company          String
+  jobTitle         String
+  jobDescriptionId String?
+  jobDescription   JobDescription?   @relation(fields: [jobDescriptionId], references: [id])
+  resumeId         String?
+  resume           Resume?           @relation(fields: [resumeId], references: [id])
+  applicationDate  DateTime          @default(now())
+  deadline         DateTime?
+  stage            ApplicationStage  @default(SAVED)
+  notes            String            @default("")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([userId])
+}
+
+model CoverLetter {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeId         String
+  resume           Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  jobDescriptionId String?
+  jobDescription   JobDescription? @relation(fields: [jobDescriptionId], references: [id])
+  title            String
+  content          String
+  tone             String   @default("professional")
+  wordCount        Int      @default(300)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ShareLink {
+  id               String    @id @default(uuid())
+  resumeId         String
+  resume           Resume    @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token            String    @unique
+  visibleSections  Json      @default("[]")
+  passwordHash     String?
+  expiresAt        DateTime?
+  viewCount        Int       @default(0)
+  createdAt        DateTime  @default(now())
+
+  @@index([token])
+  @@index([resumeId])
+}
+
+model Team {
+  id        String       @id @default(uuid())
+  name      String
+  ownerId   String
+  owner     User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  members   TeamMember[]
+
+  @@index([ownerId])
+}
+
+model TeamMember {
+  id        String     @id @default(uuid())
+  teamId    String
+  team      Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      TeamRole   @default(VIEWER)
+  createdAt DateTime   @default(now())
+
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+model LearningPlan {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeId         String?
+  jobDescriptionId String?
+  title            String
+  planJson         Json     @default("[]")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId])
+}
+
 enum UploadStatus {
   PENDING
   PARSING
@@ -130,4 +334,28 @@ enum BatchStatus {
   IN_PROGRESS
   COMPLETE
   FAILED
+}
+
+enum NotificationType {
+  ANALYSIS_COMPLETE
+  BATCH_COMPLETE
+  DEADLINE_REMINDER
+  COACH_INACTIVE
+  WEEKLY_DIGEST
+}
+
+enum ApplicationStage {
+  SAVED
+  APPLIED
+  PHONE_SCREEN
+  INTERVIEW
+  OFFER
+  REJECTED
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  REVIEWER
+  VIEWER
 }

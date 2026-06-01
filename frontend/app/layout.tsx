@@ -1,13 +1,21 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Outfit } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans',
+})
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  variable: '--font-display',
+})
 
 export const metadata: Metadata = {
-  title: 'Resume Analyzer',
-  description: 'AI-powered resume parsing and analysis platform',
+  title: 'ResumeAI — Premium AI Resume Analyzer & Coach',
+  description: 'An intelligent AI-powered resume parser, ATS scoring analyzer, batch recruiter ranker, and interactive career coach.',
 }
 
 export default function RootLayout({
@@ -16,8 +24,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
+      <body className="font-sans antialiased bg-canvas text-foreground">
         <Providers>{children}</Providers>
       </body>
     </html>

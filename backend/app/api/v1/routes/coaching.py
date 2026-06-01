@@ -197,8 +197,9 @@ async def send_message_stream(
     db: Prisma = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    from fastapi.responses import StreamingResponse  # noqa: PLC0415
     import json  # noqa: PLC0415
+
+    from fastapi.responses import StreamingResponse  # noqa: PLC0415
 
     repo = CoachingRepository(db)
     session = await repo.get_by_id(session_id)
@@ -248,8 +249,8 @@ async def send_message_stream(
             await repo.append_message(session_id, messages)
 
             try:
-                from app.services.cache import CacheService  # noqa: PLC0415
                 from app.ml.llm.coach import _CACHE_TTL, _cache_key  # noqa: PLC0415
+                from app.services.cache import CacheService  # noqa: PLC0415
                 cache = CacheService()
                 key = _cache_key(session.messages or [], body.message)
                 await cache.set(key, reply_content, ttl=_CACHE_TTL)

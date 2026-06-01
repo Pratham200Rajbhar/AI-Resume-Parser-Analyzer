@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
+import { useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { JobProgressSocket } from '@/lib/websocket'
 import { useResumeStore } from '@/stores/resume'
@@ -29,6 +30,7 @@ export function useResumeUpload() {
   const [uploadState, setUploadState] = useState<UploadState>({ status: 'idle' })
   const [progress, setProgress] = useState(0)
   const [jobEvent, setJobEvent] = useState<JobProgressEvent | null>(null)
+  const queryClient = useQueryClient()
 
   const { setUploadProgress, setJobProgress } = useResumeStore()
   const { addActiveJob, removeActiveJob, addToast } = useUIStore()
@@ -61,6 +63,9 @@ export function useResumeUpload() {
             setUploadState({ status: 'complete', resumeId, jobId })
             removeActiveJob(jobId)
             socket.disconnect()
+            queryClient.invalidateQueries({ queryKey: ['resumes'] })
+            queryClient.invalidateQueries({ queryKey: ['batches'] })
+            queryClient.invalidateQueries({ queryKey: ['analytics'] })
             addToast({
               title: 'Resume analyzed',
               description: `${file.name} has been successfully analyzed.`,
@@ -75,6 +80,7 @@ export function useResumeUpload() {
             })
             removeActiveJob(jobId)
             socket.disconnect()
+            queryClient.invalidateQueries({ queryKey: ['resumes'] })
             addToast({
               title: 'Analysis failed',
               description: event.message ?? 'An error occurred during analysis.',
@@ -92,7 +98,7 @@ export function useResumeUpload() {
         })
       }
     },
-    [setUploadProgress, setJobProgress, addActiveJob, removeActiveJob, addToast]
+    [setUploadProgress, setJobProgress, addActiveJob, removeActiveJob, addToast, queryClient]
   )
 
   const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({

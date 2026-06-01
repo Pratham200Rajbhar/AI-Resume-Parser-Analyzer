@@ -100,6 +100,8 @@ axiosInstance.interceptors.response.use(
         if (typeof window !== 'undefined') {
           localStorage.removeItem('access_token')
           localStorage.removeItem('refresh_token')
+          document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+          document.cookie = 'refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
           window.location.href = '/login'
         }
         return Promise.reject(error)
@@ -114,6 +116,7 @@ axiosInstance.interceptors.response.use(
 
         if (typeof window !== 'undefined') {
           localStorage.setItem('access_token', access_token)
+          document.cookie = `access_token=${access_token}; path=/; max-age=86400; SameSite=Lax`
         }
 
         axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
@@ -128,6 +131,8 @@ axiosInstance.interceptors.response.use(
         if (typeof window !== 'undefined') {
           localStorage.removeItem('access_token')
           localStorage.removeItem('refresh_token')
+          document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+          document.cookie = 'refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
           window.location.href = '/login'
         }
         return Promise.reject(refreshError)
@@ -139,6 +144,185 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+// -----------------------------------------------------------------------------
+// Response shapes for the consolidated feature modules below.
+// Responses are camelCased by the interceptor; request bodies stay snake_case.
+// -----------------------------------------------------------------------------
+export interface AnalyticsSummary {
+  totalResumes: number
+  avgAtsScore: number
+  highestScoreThisMonth: number
+  activeCoachingSessions: number
+  statusCounts: Record<string, number>
+  scoreDistribution: { range: string; count: number }[]
+  weeklyTrend: { week: string; avgScore: number | null; count: number }[]
+  topSkills: { skill: string; count: number }[]
+}
+
+export interface Application {
+  id: string
+  company: string
+  jobTitle: string
+  jobDescriptionId: string | null
+  resumeId: string | null
+  applicationDate: string
+  deadline: string | null
+  stage: string
+  notes: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ApplicationInput {
+  company?: string
+  jobTitle?: string
+  stage?: string
+  notes?: string
+  deadline?: string
+  jobDescriptionId?: string
+  resumeId?: string
+}
+
+export interface CoverLetter {
+  id: string
+  resumeId: string
+  jobDescriptionId: string | null
+  title: string
+  content: string
+  tone: string
+  wordCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface InterviewQuestion {
+  category: string
+  question: string
+  starTemplate: string
+}
+
+export interface PracticeFeedback {
+  score: number
+  clarity: string
+  specificity: string
+  metricsUsage: string
+  improvementNotes: string
+}
+
+export interface WorkspaceCandidate {
+  id: string
+  resumeId: string
+  name: string
+  atsScore: number
+  matchScore: number
+  topSkills: string[]
+  notes: string
+  column: string
+  position: number
+  jobDescriptionId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WorkspaceColumn {
+  id: string
+  name: string
+  slug: string
+  position: number
+  createdAt: string
+}
+
+export interface UserPreferences {
+  defaultLlmProvider: string
+  defaultExportFormat: string
+  emailAnalysisComplete: boolean
+  emailBatchDone: boolean
+  emailDeadlineReminder: boolean
+}
+
+export interface ApiKey {
+  id: string
+  name: string
+  keyPrefix: string
+  lastUsedAt: string | null
+  createdAt: string
+}
+
+export interface ApiKeyCreated extends ApiKey {
+  key: string
+}
+
+export interface AppNotification {
+  id: string
+  type: string
+  title: string
+  body: string
+  read: boolean
+  link: string | null
+  createdAt: string
+}
+
+export interface SearchResult {
+  id: string
+  type: string
+  title: string
+  subtitle: string | null
+  href: string
+}
+
+export interface SearchResults {
+  resumes?: SearchResult[]
+  jds?: SearchResult[]
+  coaching?: SearchResult[]
+  applications?: SearchResult[]
+}
+
+export interface ShareLink {
+  id: string
+  token: string
+  visibleSections: string[]
+  expiresAt: string | null
+  viewCount: number
+  createdAt: string
+}
+
+export interface Team {
+  id: string
+  name: string
+  ownerId: string
+  createdAt: string
+}
+
+export interface TeamMember {
+  id: string
+  userId: string
+  teamId: string
+  role: string
+  createdAt: string
+}
+
+export interface TailoredScorePair {
+  atsScore: number
+  matchScore: number
+}
+
+export interface TailoredExperience {
+  company: string
+  role: string
+  rewrittenBullets: string[]
+}
+
+export interface TailorResult {
+  newResumeId: string
+  sourceResumeId: string
+  jobDescriptionId: string
+  summary: string
+  rewrittenExperiences: TailoredExperience[]
+  addedKeywords: string[]
+  before: TailoredScorePair
+  after: TailoredScorePair
+}
 
 export const api = {
   auth: {
@@ -192,9 +376,9 @@ export const api = {
       return response.data
     },
 
-    list: async (page = 1, pageSize = 20): Promise<PaginatedResponse<Resume>> => {
+    list: async (page = 1, pageSize = 20, sortBy = 'createdAt', sortOrder = 'desc', status?: string): Promise<PaginatedResponse<Resume>> => {
       const response = await axiosInstance.get<PaginatedResponse<Resume>>('/resumes', {
-        params: { page, page_size: pageSize },
+        params: { page, page_size: pageSize, sort_by: sortBy, sort_order: sortOrder, status },
       })
       return response.data
     },
@@ -219,11 +403,29 @@ export const api = {
       })
       return response.data
     },
+
+    exportFormat: async (id: string, format: 'json' | 'docx'): Promise<Blob> => {
+      const response = await axiosInstance.get(`/resumes/${id}/export`, {
+        params: { format },
+        responseType: 'blob',
+      })
+      return response.data
+    },
+
+    rewriteBullet: async (id: string, bullet: string): Promise<{ alternatives: { text: string; reason: string }[] }> => {
+      const response = await axiosInstance.post(`/resumes/${id}/rewrite-bullet`, { bullet })
+      return response.data
+    },
+
+    getVersions: async (id: string): Promise<{ id: string; fileName: string; atsScore: number | null; createdAt: string; isCurrent: boolean; parentResumeId: string | null }[]> => {
+      const response = await axiosInstance.get(`/resumes/${id}/versions`)
+      return response.data
+    },
   },
 
   jds: {
     create: async (title: string, company: string | undefined, rawText: string): Promise<JobDescription> => {
-      const response = await axiosInstance.post<JobDescription>('/jds/', {
+      const response = await axiosInstance.post<JobDescription>('/jds', {
         title,
         company,
         raw_text: rawText,
@@ -232,12 +434,29 @@ export const api = {
     },
 
     list: async (): Promise<JobDescription[]> => {
-      const response = await axiosInstance.get<{ items: JobDescription[]; total: number }>('/jds/')
+      const response = await axiosInstance.get<{ items: JobDescription[]; total: number }>('/jds')
       return response.data.items
     },
 
     get: async (id: string): Promise<JobDescription> => {
       const response = await axiosInstance.get<JobDescription>(`/jds/${id}`)
+      return response.data
+    },
+
+    update: async (
+      id: string,
+      input: { title?: string; company?: string; rawText?: string }
+    ): Promise<JobDescription> => {
+      const response = await axiosInstance.patch<JobDescription>(`/jds/${id}`, {
+        title: input.title,
+        company: input.company || undefined,
+        raw_text: input.rawText,
+      })
+      return response.data
+    },
+
+    getMatches: async (id: string): Promise<JdMatchResult[]> => {
+      const response = await axiosInstance.get<JdMatchResult[]>(`/jds/${id}/matches`)
       return response.data
     },
 
@@ -249,11 +468,16 @@ export const api = {
       const response = await axiosInstance.post<JdMatchResult>(`/jds/${jdId}/match/${resumeId}`)
       return response.data
     },
+
+    importUrl: async (url: string): Promise<{ title: string; company: string | null; rawText: string; sourceUrl: string }> => {
+      const response = await axiosInstance.post('/jds/import-url', { url })
+      return response.data
+    },
   },
 
   batches: {
     create: async (jdId?: string): Promise<BatchJob> => {
-      const response = await axiosInstance.post<BatchJob>('/batches/', {
+      const response = await axiosInstance.post<BatchJob>('/batches', {
         jd_id: jdId ?? null,
       })
       return response.data
@@ -384,7 +608,9 @@ export const api = {
                 throw new Error(parsed.error)
               }
             } catch (err) {
-              console.error('Failed to parse SSE line:', trimmed, err)
+              if (process.env.NODE_ENV !== 'production') {
+                console.error('Failed to parse SSE line:', trimmed, err)
+              }
             }
           }
         }
@@ -401,6 +627,333 @@ export const api = {
 
     deleteSession: async (id: string): Promise<void> => {
       await axiosInstance.delete(`/coaching/sessions/${id}`)
+    },
+  },
+
+  analytics: {
+    summary: async (): Promise<AnalyticsSummary> => {
+      const response = await axiosInstance.get<AnalyticsSummary>('/analytics/summary')
+      return response.data
+    },
+  },
+
+  applications: {
+    list: async (): Promise<Application[]> => {
+      const response = await axiosInstance.get<Application[]>('/applications')
+      return response.data
+    },
+
+    create: async (input: ApplicationInput): Promise<Application> => {
+      const response = await axiosInstance.post<Application>('/applications', {
+        company: input.company,
+        job_title: input.jobTitle,
+        stage: input.stage,
+        notes: input.notes,
+        deadline: input.deadline || undefined,
+        job_description_id: input.jobDescriptionId,
+        resume_id: input.resumeId,
+      })
+      return response.data
+    },
+
+    update: async (id: string, input: ApplicationInput): Promise<Application> => {
+      const response = await axiosInstance.patch<Application>(`/applications/${id}`, {
+        company: input.company,
+        job_title: input.jobTitle,
+        stage: input.stage,
+        notes: input.notes,
+        deadline: input.deadline || undefined,
+        job_description_id: input.jobDescriptionId,
+        resume_id: input.resumeId,
+      })
+      return response.data
+    },
+
+    remove: async (id: string): Promise<void> => {
+      await axiosInstance.delete(`/applications/${id}`)
+    },
+  },
+
+  coverLetters: {
+    list: async (): Promise<CoverLetter[]> => {
+      const response = await axiosInstance.get<CoverLetter[]>('/cover-letters')
+      return response.data
+    },
+
+    generate: async (
+      resumeId: string,
+      jobDescriptionId?: string,
+      tone = 'professional',
+      wordCount = 300
+    ): Promise<CoverLetter> => {
+      const response = await axiosInstance.post<CoverLetter>('/cover-letters/generate', {
+        resume_id: resumeId,
+        job_description_id: jobDescriptionId,
+        tone,
+        word_count: wordCount,
+      })
+      return response.data
+    },
+
+    remove: async (id: string): Promise<void> => {
+      await axiosInstance.delete(`/cover-letters/${id}`)
+    },
+  },
+
+  interviewPrep: {
+    generate: async (resumeId: string, jobDescriptionId?: string): Promise<InterviewQuestion[]> => {
+      const response = await axiosInstance.post<InterviewQuestion[]>('/interview-prep/generate', {
+        resume_id: resumeId,
+        job_description_id: jobDescriptionId,
+      })
+      return response.data
+    },
+
+    practiceFeedback: async (question: string, answer: string): Promise<PracticeFeedback> => {
+      const response = await axiosInstance.post<PracticeFeedback>('/interview-prep/practice-feedback', {
+        question,
+        answer,
+      })
+      return response.data
+    },
+  },
+
+  workspace: {
+    listCandidates: async (): Promise<WorkspaceCandidate[]> => {
+      const response = await axiosInstance.get<WorkspaceCandidate[]>('/workspace/candidates')
+      return response.data
+    },
+
+    addCandidate: async (input: {
+      resumeId: string
+      name: string
+      atsScore?: number
+      matchScore?: number
+      topSkills?: string[]
+      notes?: string
+      column?: string
+      position?: number
+      jobDescriptionId?: string
+    }): Promise<WorkspaceCandidate> => {
+      const response = await axiosInstance.post<WorkspaceCandidate>('/workspace/candidates', {
+        resume_id: input.resumeId,
+        name: input.name,
+        ats_score: input.atsScore ?? 0,
+        match_score: input.matchScore ?? 0,
+        top_skills: input.topSkills ?? [],
+        notes: input.notes ?? '',
+        column: input.column ?? 'shortlisted',
+        position: input.position ?? 0,
+        job_description_id: input.jobDescriptionId,
+      })
+      return response.data
+    },
+
+    updateCandidate: async (
+      id: string,
+      input: { column?: string; notes?: string; position?: number; matchScore?: number }
+    ): Promise<WorkspaceCandidate> => {
+      const response = await axiosInstance.patch<WorkspaceCandidate>(`/workspace/candidates/${id}`, {
+        column: input.column,
+        notes: input.notes,
+        position: input.position,
+        match_score: input.matchScore,
+      })
+      return response.data
+    },
+
+    removeCandidate: async (id: string): Promise<void> => {
+      await axiosInstance.delete(`/workspace/candidates/${id}`)
+    },
+
+    listColumns: async (): Promise<WorkspaceColumn[]> => {
+      const response = await axiosInstance.get<WorkspaceColumn[]>('/workspace/columns')
+      return response.data
+    },
+  },
+
+  settings: {
+    updateProfile: async (input: { fullName?: string; avatarUrl?: string }): Promise<User> => {
+      const response = await axiosInstance.patch<User>('/auth/me', {
+        full_name: input.fullName,
+        avatar_url: input.avatarUrl,
+      })
+      return response.data
+    },
+
+    changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
+      await axiosInstance.post('/auth/me/change-password', {
+        current_password: currentPassword,
+        new_password: newPassword,
+      })
+    },
+
+    getPreferences: async (): Promise<UserPreferences> => {
+      const response = await axiosInstance.get<UserPreferences>('/auth/preferences')
+      return response.data
+    },
+
+    updatePreferences: async (input: Partial<UserPreferences>): Promise<UserPreferences> => {
+      const response = await axiosInstance.patch<UserPreferences>('/auth/preferences', {
+        default_llm_provider: input.defaultLlmProvider,
+        default_export_format: input.defaultExportFormat,
+        email_analysis_complete: input.emailAnalysisComplete,
+        email_batch_done: input.emailBatchDone,
+        email_deadline_reminder: input.emailDeadlineReminder,
+      })
+      return response.data
+    },
+
+    listApiKeys: async (): Promise<ApiKey[]> => {
+      const response = await axiosInstance.get<ApiKey[]>('/auth/api-keys')
+      return response.data
+    },
+
+    createApiKey: async (name: string): Promise<ApiKeyCreated> => {
+      const response = await axiosInstance.post<ApiKeyCreated>('/auth/api-keys', { name })
+      return response.data
+    },
+
+    deleteApiKey: async (id: string): Promise<void> => {
+      await axiosInstance.delete(`/auth/api-keys/${id}`)
+    },
+  },
+
+  search: {
+    query: async (q: string, types?: string): Promise<SearchResults> => {
+      const response = await axiosInstance.get<SearchResults>('/search', {
+        params: { q, ...(types ? { types } : {}) },
+      })
+      return response.data
+    },
+  },
+
+  notifications: {
+    list: async (): Promise<AppNotification[]> => {
+      const response = await axiosInstance.get<AppNotification[]>('/notifications')
+      return response.data
+    },
+
+    unreadCount: async (): Promise<number> => {
+      const response = await axiosInstance.get<{ count: number }>('/notifications/unread-count')
+      return response.data.count
+    },
+
+    markRead: async (id: string): Promise<void> => {
+      await axiosInstance.patch(`/notifications/${id}/read`)
+    },
+
+    markAllRead: async (): Promise<void> => {
+      await axiosInstance.patch('/notifications/read-all')
+    },
+  },
+
+  share: {
+    create: async (
+      resumeId: string,
+      input: { visibleSections?: string[]; password?: string; expiresAt?: string }
+    ): Promise<ShareLink> => {
+      const response = await axiosInstance.post<ShareLink>(`/share/resumes/${resumeId}`, {
+        visible_sections: input.visibleSections ?? [],
+        password: input.password,
+        expires_at: input.expiresAt,
+      })
+      return response.data
+    },
+
+    list: async (resumeId: string): Promise<ShareLink[]> => {
+      const response = await axiosInstance.get<ShareLink[]>(`/share/resumes/${resumeId}`)
+      return response.data
+    },
+
+    remove: async (resumeId: string, token: string): Promise<void> => {
+      await axiosInstance.delete(`/share/resumes/${resumeId}/${token}`)
+    },
+
+    getShared: async (token: string, password?: string): Promise<Record<string, unknown>> => {
+      const response = await axiosInstance.get(`/share/${token}`, {
+        params: password ? { password } : {},
+      })
+      return response.data
+    },
+  },
+
+  teams: {
+    list: async (): Promise<Team[]> => {
+      const response = await axiosInstance.get<Team[]>('/teams')
+      return response.data
+    },
+
+    create: async (name: string): Promise<Team> => {
+      const response = await axiosInstance.post<Team>('/teams', { name })
+      return response.data
+    },
+
+    remove: async (teamId: string): Promise<void> => {
+      await axiosInstance.delete(`/teams/${teamId}`)
+    },
+
+    listMembers: async (teamId: string): Promise<TeamMember[]> => {
+      const response = await axiosInstance.get<TeamMember[]>(`/teams/${teamId}/members`)
+      return response.data
+    },
+
+    addMember: async (teamId: string, userId: string, role = 'VIEWER'): Promise<TeamMember> => {
+      const response = await axiosInstance.post<TeamMember>(`/teams/${teamId}/members`, {
+        user_id: userId,
+        role,
+      })
+      return response.data
+    },
+
+    updateMember: async (teamId: string, memberId: string, role: string): Promise<TeamMember> => {
+      const response = await axiosInstance.patch<TeamMember>(`/teams/${teamId}/members/${memberId}`, {
+        role,
+      })
+      return response.data
+    },
+
+    removeMember: async (teamId: string, memberId: string): Promise<void> => {
+      await axiosInstance.delete(`/teams/${teamId}/members/${memberId}`)
+    },
+  },
+
+  tailoring: {
+    generate: async (resumeId: string, jobDescriptionId: string): Promise<TailorResult> => {
+      const response = await axiosInstance.post<TailorResult>('/tailoring/generate', {
+        resume_id: resumeId,
+        job_description_id: jobDescriptionId,
+      })
+      return response.data
+    },
+
+    get: async (resumeId: string): Promise<Record<string, unknown>> => {
+      const response = await axiosInstance.get(`/tailoring/${resumeId}`)
+      return response.data
+    },
+  },
+
+  learningPlans: {
+    generate: async (resumeId: string, jobDescriptionId: string): Promise<Record<string, unknown>> => {
+      const response = await axiosInstance.post('/learning-plans/generate', {
+        resume_id: resumeId,
+        job_description_id: jobDescriptionId,
+      })
+      return response.data
+    },
+
+    list: async (): Promise<Record<string, unknown>[]> => {
+      const response = await axiosInstance.get('/learning-plans')
+      return response.data
+    },
+
+    get: async (planId: string): Promise<Record<string, unknown>> => {
+      const response = await axiosInstance.get(`/learning-plans/${planId}`)
+      return response.data
+    },
+
+    remove: async (planId: string): Promise<void> => {
+      await axiosInstance.delete(`/learning-plans/${planId}`)
     },
   },
 }

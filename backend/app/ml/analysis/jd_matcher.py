@@ -1,12 +1,8 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
 
 import structlog
-
-if TYPE_CHECKING:
-    pass
 
 logger = structlog.get_logger(__name__)
 
@@ -18,6 +14,7 @@ def _get_embedder():
     global _embedder
     if _embedder is None:
         from pathlib import Path
+
         from sentence_transformers import SentenceTransformer  # noqa: PLC0415
         
         _WEIGHTS_DIR = Path(__file__).parent.parent / "models" / "weights"

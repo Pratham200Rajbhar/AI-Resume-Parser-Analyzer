@@ -1,5 +1,7 @@
+import re
 from datetime import datetime
 
+import httpx
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from prisma.models import User
@@ -38,6 +40,23 @@ class JDListResponse(BaseModel):
     total: int
 
 
+class UpdateJDRequest(BaseModel):
+    title: str | None = None
+    company: str | None = None
+    raw_text: str | None = None
+
+
+class ImportUrlRequest(BaseModel):
+    url: str
+
+
+class ImportUrlResponse(BaseModel):
+    title: str
+    company: str | None
+    raw_text: str
+    source_url: str
+
+
 class MatchResponse(BaseModel):
     id: str
     resume_id: str
@@ -48,11 +67,12 @@ class MatchResponse(BaseModel):
     keyword_report: dict
     created_at: datetime
     job_description: dict | None = None
+    resume_file_name: str | None = None
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
 
-@router.post("/", response_model=JDResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=JDResponse, status_code=status.HTTP_201_CREATED)
 async def create_jd(
     body: CreateJDRequest,
     db: Prisma = Depends(get_db),
@@ -75,7 +95,7 @@ async def create_jd(
     return JDResponse(id=jd.id, title=jd.title, company=jd.company, raw_text=jd.rawText, created_at=jd.createdAt)
 
 
-@router.get("/", response_model=JDListResponse)
+@router.get("", response_model=JDListResponse)
 async def list_jds(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -118,6 +138,122 @@ async def delete_jd(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job description not found")
     await repo.delete(jd_id)
     logger.info("jd_deleted", jd_id=jd_id, user_id=current_user.id)
+
+
+@router.patch("/{jd_id}", response_model=JDResponse)
+async def update_jd(
+    jd_id: str,
+    body: UpdateJDRequest,
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> JDResponse:
+    repo = JdRepository(db)
+    jd = await repo.get_by_id(jd_id)
+    if jd is None or jd.userId != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job description not found")
+
+    update_data: dict = {}
+    if body.title is not None:
+        update_data["title"] = body.title
+    if body.company is not None:
+        update_data["company"] = body.company
+    if body.raw_text is not None:
+        from app.ml.analysis.jd_matcher import JDMatcher  # noqa: PLC0415
+        matcher = JDMatcher()
+        embedding = matcher.embed(body.raw_text)
+        update_data["rawText"] = body.raw_text
+        update_data["embeddingVector"] = embedding
+
+    updated = await db.jobdescription.update(where={"id": jd_id}, data=update_data)
+    return JDResponse(id=updated.id, title=updated.title, company=updated.company, raw_text=updated.rawText, created_at=updated.createdAt)
+
+
+@router.post("/import-url", response_model=ImportUrlResponse)
+async def import_from_url(
+    body: ImportUrlRequest,
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ImportUrlResponse:
+    url = body.url.strip()
+    if not url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid URL")
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; ResumeAI/1.0)",
+        "Accept": "text/html,application/xhtml+xml",
+    }
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
+            response = await client.get(url, headers=headers)
+        if response.status_code != 200:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"URL returned status {response.status_code}")
+        html = response.text
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Failed to fetch URL: {str(e)}")
+
+    # Strip HTML tags
+    text = re.sub(r"<script[^>]*>.*?</script>", " ", html, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<style[^>]*>.*?</style>", " ", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"&[a-zA-Z]+;", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+
+    # Extract title from <title> tag
+    title_match = re.search(r"<title[^>]*>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
+    page_title = title_match.group(1).strip() if title_match else ""
+    page_title = re.sub(r"\s*[-|]\s*.*$", "", page_title).strip()
+
+    # Limit text length
+    raw_text = text[:8000]
+
+    # Try to extract company from URL domain
+    domain_match = re.search(r"https?://(?:www\.)?([^/]+)", url)
+    company = None
+    if domain_match:
+        domain = domain_match.group(1)
+        known = {"linkedin.com": None, "indeed.com": None, "greenhouse.io": None, "lever.co": None, "workday.com": None}
+        if domain not in known:
+            company = domain.split(".")[0].capitalize()
+
+    return ImportUrlResponse(
+        title=page_title or "Job Description",
+        company=company,
+        raw_text=raw_text,
+        source_url=url,
+    )
+
+
+@router.get("/{jd_id}/matches")
+async def get_jd_matches(
+    jd_id: str,
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[MatchResponse]:
+    repo = JdRepository(db)
+    jd = await repo.get_by_id(jd_id)
+    if jd is None or jd.userId != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job description not found")
+
+    matches = await db.jdmatchresult.find_many(
+        where={"jobDescriptionId": jd_id},
+        include={"resume": True},
+        order={"createdAt": "desc"},
+    )
+    return [
+        MatchResponse(
+            id=m.id,
+            resume_id=m.resumeId,
+            job_description_id=m.jobDescriptionId,
+            match_score=m.matchScore,
+            matched_skills=m.matchedSkills,
+            gap_skills=m.gapSkills,
+            keyword_report=m.keywordReport,
+            created_at=m.createdAt,
+            job_description={"id": jd.id, "title": jd.title, "company": jd.company},
+            resume_file_name=m.resume.fileName if m.resume else None,
+        )
+        for m in matches
+    ]
 
 
 @router.post("/{jd_id}/match/{resume_id}", response_model=MatchResponse)

@@ -185,14 +185,14 @@ export default function ResumeDetailPage() {
           </div>
 
           {/* Suggestions */}
-          {analysis.atsBreakdown.suggestions.length > 0 && (
+          {(analysis.atsBreakdown.suggestions ?? []).length > 0 && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Improvement Suggestions</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  {analysis.atsBreakdown.suggestions.map((s, i) => (
+                  {(analysis.atsBreakdown.suggestions ?? []).map((s, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
                       <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                         {i + 1}
@@ -206,7 +206,7 @@ export default function ResumeDetailPage() {
           )}
 
           {/* Skills Radar */}
-          {entities && entities.skills.length > 0 && (
+          {entities && (entities.skills?.length ?? 0) > 0 && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Skills Overview</CardTitle>
@@ -230,7 +230,7 @@ export default function ResumeDetailPage() {
           )}
 
           {/* Career Timeline */}
-          {entities && entities.experience.length > 0 && (
+          {entities && (entities.experience?.length ?? 0) > 0 && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Career Timeline</CardTitle>

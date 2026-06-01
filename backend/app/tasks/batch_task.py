@@ -2,8 +2,8 @@ import asyncio
 import json
 
 import structlog
-from prisma import Json
 
+from prisma import Json
 
 logger = structlog.get_logger(__name__)
 
@@ -14,6 +14,7 @@ def _get_redis_conn():
     global _redis_conn
     if _redis_conn is None:
         import redis  # noqa: PLC0415
+
         from app.core.config import settings  # noqa: PLC0415
         _redis_conn = redis.from_url(settings.redis_url, decode_responses=True)
     return _redis_conn
@@ -154,8 +155,19 @@ async def _process_batch_async(
                         where={"id": batch_id},
                         data={"failedCount": {"increment": 1}},
                     )
-                except Exception:
-                    pass
+                except Exception as inner:
+                    logger.error(
+                        "batch_resume_status_update_failed",
+                        resume_id=resume_id,
+                        batch_id=batch_id,
+                        error=str(inner),
+                    )
+                _publish_sync(channel, "RESUME_FAILED", {
+                    "batch_id": batch_id,
+                    "resume_id": resume_id,
+                    "completed": idx + 1,
+                    "total": len(resume_ids),
+                })
 
         ranked = ranker.rank(candidates, jd_embedding)
 
@@ -172,8 +184,8 @@ async def _process_batch_async(
         logger.error("batch_failed", batch_id=batch_id, error=str(exc))
         try:
             await db.batchjob.update(where={"id": batch_id}, data={"status": "FAILED"})
-        except Exception:
-            pass
+        except Exception as inner:
+            logger.error("batch_status_update_failed", batch_id=batch_id, error=str(inner))
         _publish_sync(channel, "ERROR", {"batch_id": batch_id, "error": str(exc)})
         raise
 

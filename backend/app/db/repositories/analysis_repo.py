@@ -2,7 +2,7 @@ from typing import Any
 
 from prisma.models import ResumeAnalysis
 
-from prisma import Prisma, Json
+from prisma import Json, Prisma
 
 
 class AnalysisRepository:

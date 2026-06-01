@@ -2,6 +2,7 @@ export interface User {
   id: string
   email: string
   fullName?: string
+  avatarUrl?: string
   createdAt: string
 }
 
@@ -153,7 +154,7 @@ export interface CoachingSession {
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
-  timestamp: string
+  timestamp?: string
 }
 
 export interface JobProgressEvent {

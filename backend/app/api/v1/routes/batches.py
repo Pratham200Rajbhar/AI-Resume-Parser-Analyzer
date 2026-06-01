@@ -3,7 +3,16 @@ import io
 from datetime import datetime
 
 import structlog
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status, BackgroundTasks
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from fastapi.responses import StreamingResponse
 from prisma.models import User
 from pydantic import BaseModel, ConfigDict
@@ -61,7 +70,7 @@ class RankingsResponse(BaseModel):
 
 # ── Routes ───────────────────────────────────────────────────────────────────
 
-@router.post("/", response_model=BatchResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=BatchResponse, status_code=status.HTTP_201_CREATED)
 async def create_batch(
     body: CreateBatchRequest,
     db: Prisma = Depends(get_db),
@@ -151,7 +160,7 @@ async def upload_batch_files(
     return BatchUploadResponse(batch_id=batch_id, accepted=len(resume_ids), job_id=job_id)
 
 
-@router.get("/", response_model=list[BatchResponse])
+@router.get("", response_model=list[BatchResponse])
 async def list_batches(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),

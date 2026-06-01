@@ -5,7 +5,16 @@ from datetime import datetime
 from pathlib import Path
 
 import structlog
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status, BackgroundTasks
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from fastapi.responses import StreamingResponse
 from prisma.models import User
 from pydantic import BaseModel, ConfigDict
@@ -163,17 +172,43 @@ async def upload_resume(
     return UploadResponse(resume_id=resume.id, job_id=job_id)
 
 
-@router.get("/", response_model=ResumeListResponse)
+@router.get("", response_model=ResumeListResponse)
 async def list_resumes(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    sort_by: str = Query("createdAt", pattern="^(fileName|atsScore|createdAt|status)$"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
+    status_filter: str | None = Query(None, alias="status"),
     db: Prisma = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ResumeListResponse:
-    repo = ResumeRepository(db)
     skip = (page - 1) * page_size
-    resumes = await repo.list_by_user(current_user.id, skip=skip, take=page_size)
-    total = await repo.count_by_user(current_user.id)
+
+    where: dict = {"userId": current_user.id}
+    if status_filter:
+        where["status"] = status_filter
+
+    # Map sort_by to Prisma field
+    sort_field_map = {"fileName": "fileName", "createdAt": "createdAt", "status": "status", "atsScore": "createdAt"}
+    prisma_sort_field = sort_field_map.get(sort_by, "createdAt")
+
+    resumes = await db.resume.find_many(
+        where=where,
+        skip=skip,
+        take=page_size,
+        order={prisma_sort_field: sort_order},
+        include={"analysis": True},
+    )
+    total = await db.resume.count(where=where)
+
+    # Sort by atsScore in Python if needed (it's in a related model)
+    if sort_by == "atsScore":
+        resumes = sorted(
+            resumes,
+            key=lambda r: (r.analysis.atsScore if r.analysis else 0),
+            reverse=(sort_order == "desc"),
+        )
+
     items = [
         ResumeResponse(
             id=r.id,
@@ -295,3 +330,239 @@ async def export_pdf(
             "Content-Length": str(len(pdf_bytes)),
         },
     )
+
+
+class RewriteBulletRequest(BaseModel):
+    bullet: str
+
+
+class RewriteAlternative(BaseModel):
+    text: str
+    reason: str
+
+
+class RewriteBulletResponse(BaseModel):
+    alternatives: list[RewriteAlternative]
+
+
+def _static_bullet_alternatives(bullet: str) -> list[RewriteAlternative]:
+    """Deterministic, genuinely useful rewrites used when the LLM is unavailable.
+
+    Each follows a recognized resume-writing pattern so the user still gets
+    actionable options rather than a placeholder.
+    """
+    text = bullet.strip().rstrip(".")
+    # Strip a leading weak verb so the strong-verb variant reads naturally.
+    lowered = text[0].lower() + text[1:] if text else text
+    return [
+        RewriteAlternative(
+            text=f"Spearheaded {lowered}, driving measurable impact for the team.",
+            reason="Leads with a strong action verb to convey ownership and initiative.",
+        ),
+        RewriteAlternative(
+            text=f"{text}, resulting in [X%] improvement across [key metric].",
+            reason="Adds a placeholder for quantifiable results — recruiters and ATS favor metrics.",
+        ),
+        RewriteAlternative(
+            text=f"Delivered {lowered} by [specific action], achieving [concrete outcome].",
+            reason="Frames the bullet in STAR style (action → result) for clarity and impact.",
+        ),
+    ]
+
+
+@router.post("/{resume_id}/rewrite-bullet", response_model=RewriteBulletResponse)
+async def rewrite_bullet(
+    resume_id: str,
+    body: RewriteBulletRequest,
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> RewriteBulletResponse:
+    resume_repo = ResumeRepository(db)
+    resume = await resume_repo.get_by_id(resume_id)
+    if resume is None or resume.userId != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
+
+    prompt = f"""Rewrite this resume bullet point 3 different ways to be stronger, more impactful, and quantifiable:
+
+Original: {body.bullet}
+
+Return a JSON array of exactly 3 objects with fields:
+- text: the rewritten bullet point
+- reason: brief explanation of what was improved
+
+Return only the JSON array."""
+
+    try:
+        import json  # noqa: PLC0415
+
+        from app.ml.llm.coach import CareerCoach  # noqa: PLC0415
+        coach = CareerCoach()
+        raw = await coach.chat(session_messages=[], user_message=prompt, resume_entities={}, jd_text=None)
+        start = raw.find("[")
+        end = raw.rfind("]") + 1
+        if start >= 0 and end > start:
+            data = json.loads(raw[start:end])
+            alternatives = [RewriteAlternative(**item) for item in data[:3]]
+            if alternatives:
+                return RewriteBulletResponse(alternatives=alternatives)
+    except Exception as e:
+        logger.error("rewrite_bullet_failed", error=str(e))
+
+    return RewriteBulletResponse(alternatives=_static_bullet_alternatives(body.bullet))
+
+
+@router.post("/{resume_id}/rewrites")
+async def save_rewrite(
+    resume_id: str,
+    body: RewriteBulletRequest,
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    resume_repo = ResumeRepository(db)
+    resume = await resume_repo.get_by_id(resume_id)
+    if resume is None or resume.userId != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
+
+    rewrite = await db.resumerewrite.create(data={
+        "resumeId": resume_id,
+        "original": body.bullet,
+        "rewritten": body.bullet,
+    })
+    return {"id": rewrite.id}
+
+
+@router.get("/{resume_id}/rewrites")
+async def list_rewrites(
+    resume_id: str,
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[dict]:
+    resume_repo = ResumeRepository(db)
+    resume = await resume_repo.get_by_id(resume_id)
+    if resume is None or resume.userId != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
+
+    rewrites = await db.resumerewrite.find_many(where={"resumeId": resume_id}, order={"createdAt": "desc"})
+    return [{"id": r.id, "original": r.original, "rewritten": r.rewritten, "created_at": r.createdAt.isoformat()} for r in rewrites]
+
+
+@router.get("/{resume_id}/export")
+async def export_resume(
+    resume_id: str,
+    format: str = Query("json", pattern="^(json|docx)$"),
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> StreamingResponse:
+    resume_repo = ResumeRepository(db)
+    resume = await resume_repo.get_by_id(resume_id)
+    if resume is None or resume.userId != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
+
+    analysis_repo = AnalysisRepository(db)
+    analysis = await analysis_repo.get_by_resume_id(resume_id)
+    if analysis is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analysis not yet available")
+
+    if format == "json":
+        import json  # noqa: PLC0415
+        data = {
+            "resume_id": resume_id,
+            "file_name": resume.fileName,
+            "ats_score": analysis.atsScore,
+            "ats_breakdown": analysis.atsBreakdown,
+            "entities": analysis.entitiesJson,
+            "bias_flags": analysis.biasFlagsJson,
+            "fraud_flags": analysis.fraudFlagsJson,
+        }
+        json_bytes = json.dumps(data, indent=2, default=str).encode()
+        return StreamingResponse(
+            io.BytesIO(json_bytes),
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="analysis_{resume_id}.json"'},
+        )
+
+    # DOCX format
+    try:
+        from docx import Document  # noqa: PLC0415
+
+        doc = Document()
+        doc.add_heading(f"Resume Analysis: {resume.fileName}", 0)
+        doc.add_heading("ATS Score", level=1)
+        doc.add_paragraph(f"Overall Score: {analysis.atsScore}/100")
+
+        breakdown = analysis.atsBreakdown or {}
+        doc.add_heading("Score Breakdown", level=2)
+        for key, val in breakdown.items():
+            if key != "suggestions":
+                doc.add_paragraph(f"{key.capitalize()}: {val}", style="List Bullet")
+
+        entities = analysis.entitiesJson or {}
+        if entities.get("name"):
+            doc.add_heading("Candidate", level=1)
+            doc.add_paragraph(entities["name"])
+
+        skills = entities.get("skills", [])
+        if skills:
+            doc.add_heading("Skills", level=1)
+            for s in skills[:20]:
+                doc.add_paragraph(s.get("normalized", s.get("raw", "")), style="List Bullet")
+
+        experience = entities.get("experience", [])
+        if experience:
+            doc.add_heading("Experience", level=1)
+            for exp in experience:
+                doc.add_heading(f"{exp.get('role', '')} at {exp.get('company', '')}", level=2)
+                if exp.get("description"):
+                    doc.add_paragraph(exp["description"])
+
+        buf = io.BytesIO()
+        doc.save(buf)
+        buf.seek(0)
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="analysis_{resume_id}.docx"'},
+        )
+    except ImportError:
+        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="DOCX export requires python-docx")
+
+
+@router.get("/{resume_id}/versions")
+async def get_versions(
+    resume_id: str,
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[dict]:
+    resume_repo = ResumeRepository(db)
+    resume = await resume_repo.get_by_id(resume_id)
+    if resume is None or resume.userId != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
+
+    # Find root resume
+    root_id = resume_id
+    current = resume
+    while current.parentResumeId:
+        parent = await db.resume.find_unique(where={"id": current.parentResumeId}, include={"analysis": True})
+        if parent is None:
+            break
+        current = parent
+        root_id = current.id
+
+    # Get all versions in the chain
+    all_versions = await db.resume.find_many(
+        where={"OR": [{"id": root_id}, {"parentResumeId": root_id}]},
+        include={"analysis": True},
+        order={"createdAt": "asc"},
+    )
+
+    return [
+        {
+            "id": v.id,
+            "file_name": v.fileName,
+            "ats_score": v.analysis.atsScore if v.analysis else None,
+            "created_at": v.createdAt.isoformat(),
+            "is_current": v.id == resume_id,
+            "parent_resume_id": v.parentResumeId,
+        }
+        for v in all_versions
+    ]

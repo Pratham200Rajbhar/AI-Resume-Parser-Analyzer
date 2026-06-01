@@ -1,6 +1,6 @@
 from prisma.models import BatchJob, CoachingSession
 
-from prisma import Prisma, Json
+from prisma import Json, Prisma
 
 
 class BatchRepository:

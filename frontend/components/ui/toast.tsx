@@ -20,9 +20,9 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitive.Viewport.displayName
 
 const toastVariants = {
-  default: 'border border-gray-200 bg-white text-gray-900',
-  destructive: 'border border-red-200 bg-red-50 text-red-900',
-  success: 'border border-green-200 bg-green-50 text-green-900',
+  default: 'border border-border bg-card text-card-foreground',
+  destructive: 'border border-destructive/30 bg-destructive/10 text-destructive dark:text-red-400',
+  success: 'border border-green-200 dark:border-green-900/30 bg-green-50 dark:bg-green-950/20 text-green-900 dark:text-green-400',
 }
 
 const Toast = React.forwardRef<
@@ -50,7 +50,7 @@ const ToastAction = React.forwardRef<
   <ToastPrimitive.Action
     ref={ref}
     className={cn(
-      'inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-transparent px-3 text-sm font-medium ring-offset-white transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+      'inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 text-foreground',
       className
     )}
     {...props}
@@ -65,7 +65,7 @@ const ToastClose = React.forwardRef<
   <ToastPrimitive.Close
     ref={ref}
     className={cn(
-      'absolute right-2 top-2 rounded-md p-1 text-gray-400 opacity-0 transition-opacity hover:text-gray-900 focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100',
+      'absolute right-2 top-2 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring group-hover:opacity-100',
       className
     )}
     toast-close=""

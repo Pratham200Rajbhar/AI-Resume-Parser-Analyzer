@@ -16,7 +16,7 @@ import { QuickActions } from '@/components/coach/QuickActions'
 import { useCoachSession } from '@/hooks/useCoachSession'
 import { useUIStore } from '@/stores/ui'
 import { formatDate, cn } from '@/lib/utils'
-import { Plus, MessageSquare, Trash2, Edit2, Check, X } from 'lucide-react'
+import { Plus, MessageSquare, Trash2, Edit2, Check, X, Sparkles, Link, AlertCircle, Loader2 } from 'lucide-react'
 import type { CoachingSession } from '@/types'
 
 export default function CoachPage() {
@@ -32,7 +32,7 @@ export default function CoachPage() {
   const [titleDraft, setTitleDraft] = useState('')
   const [quickActionInput, setQuickActionInput] = useState('')
 
-  const { data: sessions, isLoading } = useQuery({
+  const { data: sessions, isLoading, isError, refetch } = useQuery({
     queryKey: ['coaching-sessions'],
     queryFn: () => api.coaching.listSessions(),
   })
@@ -52,8 +52,9 @@ export default function CoachPage() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['coaching-sessions'] })
       if (selectedSessionId === id) setSelectedSessionId('')
-      addToast({ title: 'Session deleted' })
+      addToast({ title: 'Session deleted successfully' })
     },
+    onError: () => addToast({ title: 'Failed to delete session', variant: 'destructive' }),
   })
 
   const selectedSession = sessions?.find((s) => s.id === selectedSessionId)
@@ -73,16 +74,12 @@ export default function CoachPage() {
       setNewTitle('')
       setNewResumeId('')
       setNewJdId('')
+      addToast({ title: 'Coaching session created' })
     } catch {
       addToast({ title: 'Failed to create session', variant: 'destructive' })
     } finally {
       setIsCreating(false)
     }
-  }
-
-  function startEditTitle() {
-    setTitleDraft(selectedSession?.title ?? '')
-    setEditingTitle(true)
   }
 
   async function confirmEditTitle() {
@@ -93,11 +90,17 @@ export default function CoachPage() {
     try {
       await api.coaching.updateSession(selectedSessionId, titleDraft.trim())
       queryClient.invalidateQueries({ queryKey: ['coaching-sessions'] })
+      addToast({ title: 'Title updated' })
     } catch {
       addToast({ title: 'Failed to update title', variant: 'destructive' })
     }
     setEditingTitle(false)
     setTitleDraft('')
+  }
+
+  function startEditTitle() {
+    setTitleDraft(selectedSession?.title ?? '')
+    setEditingTitle(true)
   }
 
   function cancelEditTitle() {
@@ -108,39 +111,51 @@ export default function CoachPage() {
   const analyzedResumes = resumes?.items.filter((r) => r.status === 'ANALYZED') ?? []
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 pb-6">
       <PageHeader
-        title="AI Coach"
-        description="Get personalized career coaching powered by AI"
+        title="AI Career Coach"
+        description="Engage in customized interactive reviews, behavioral prep sessions, and skill gaps analysis"
         action={
-          <Button onClick={() => setNewSessionOpen(true)}>
+          <Button onClick={() => setNewSessionOpen(true)} className="btn btn-primary rounded-full px-5">
             <Plus className="w-4 h-4 mr-2" />
-            New Session
+            New Coach Session
           </Button>
         }
       />
 
-      <div className="flex gap-4 h-[calc(100vh-220px)] min-h-[500px]">
-        {/* Session list */}
-        <div className="w-64 flex-shrink-0">
-          <Card className="h-full flex flex-col">
-            <div className="p-3 border-b border-gray-100">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Sessions</p>
+      {isError && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <p className="text-sm text-red-800 font-medium">Failed to retrieve career coach history.</p>
+          </div>
+          <Button onClick={() => refetch()} variant="ghost" size="sm" className="text-red-700 hover:bg-red-100 rounded-full font-bold">
+            Retry
+          </Button>
+        </div>
+      )}
+
+      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-210px)] min-h-[500px] items-stretch">
+        {/* Session history left sidebar drawer */}
+        <div className="w-full lg:w-72 flex-shrink-0 flex flex-col">
+          <div className="glass-card h-full flex flex-col overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/5 bg-white/2 flex-shrink-0">
+              <p className="font-display text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Conversations</p>
             </div>
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 p-2">
               {isLoading ? (
-                <div className="p-3 space-y-2">
+                <div className="space-y-2 p-2">
                   {[...Array(4)].map((_, i) => (
-                    <div key={i} className="h-14 bg-gray-100 rounded animate-pulse" />
+                    <div key={i} className="h-14 bg-gray-50/50 dark:bg-slate-800/40 rounded-xl animate-pulse border border-gray-100/50 dark:border-slate-800/30" />
                   ))}
                 </div>
               ) : !sessions || sessions.length === 0 ? (
-                <div className="p-4 text-center">
-                  <MessageSquare className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-xs text-gray-500">No sessions yet</p>
+                <div className="py-12 text-center flex flex-col items-center justify-center">
+                  <MessageSquare className="w-9 h-9 text-gray-300 dark:text-gray-600 mb-2" />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-sans">No sessions yet.</p>
                 </div>
               ) : (
-                <div className="p-2 space-y-1">
+                <div className="space-y-1.5 px-1 py-2 font-sans">
                   {sessions.map((session) => (
                     <SessionItem
                       key={session.id}
@@ -148,85 +163,92 @@ export default function CoachPage() {
                       isActive={session.id === selectedSessionId}
                       onSelect={() => setSelectedSessionId(session.id)}
                       onDelete={() => deleteMutation.mutate(session.id)}
+                      isDeleting={deleteMutation.isPending && deleteMutation.variables === session.id}
                     />
                   ))}
                 </div>
               )}
             </ScrollArea>
-          </Card>
+          </div>
         </div>
 
-        {/* Chat area */}
-        <div className="flex-1 min-w-0">
+        {/* Chat Area Right panel */}
+        <div className="flex-1 min-w-0 flex flex-col h-full">
           {!selectedSessionId ? (
-            <Card className="h-full flex items-center justify-center">
-              <div className="text-center">
-                <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-sm font-medium text-gray-900 mb-1">No session selected</h3>
-                <p className="text-sm text-gray-500 mb-4">
-                  Select a session or create a new one to start coaching
+            <div className="glass-card h-full flex flex-col items-center justify-center p-8">
+              <div className="text-center max-w-[320px]">
+                <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mb-4 mx-auto border border-blue-500/20 text-blue-400">
+                  <Sparkles className="w-7 h-7 animate-pulse" />
+                </div>
+                <h3 className="font-display text-sm font-semibold text-white">Unlock AI Coaching</h3>
+                <p className="text-xs text-slate-400 mt-1 mb-5 font-sans leading-relaxed">
+                  Start a structured career counseling session. Our agent reviews your parsed skills to guide your application pitches.
                 </p>
-                <Button onClick={() => setNewSessionOpen(true)}>
+                <Button onClick={() => setNewSessionOpen(true)} className="btn btn-primary rounded-full px-5">
                   <Plus className="w-4 h-4 mr-2" />
-                  New Session
+                  Create Coach Session
                 </Button>
               </div>
-            </Card>
+            </div>
           ) : (
-            <Card className="h-full flex flex-col">
-              {/* Session header */}
-              <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-3">
+            <div className="glass-card h-full flex flex-col overflow-hidden">
+              {/* Session dynamic header */}
+              <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between gap-4 bg-white/2 flex-shrink-0">
                 {editingTitle ? (
-                  <div className="flex items-center gap-2 flex-1">
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
                     <Input
                       value={titleDraft}
                       onChange={(e) => setTitleDraft(e.target.value)}
-                      className="h-8 text-sm"
+                      className="glass-input h-9 text-xs focus-visible:ring-blue-500 font-sans"
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') confirmEditTitle()
                         if (e.key === 'Escape') cancelEditTitle()
                       }}
                     />
-                    <Button size="sm" variant="ghost" onClick={confirmEditTitle}>
-                      <Check className="w-4 h-4 text-green-600" />
+                    <Button size="icon" variant="ghost" onClick={confirmEditTitle} className="h-8 w-8 rounded-full hover:bg-green-500/10 text-green-400 flex-shrink-0">
+                      <Check className="w-4 h-4" />
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={cancelEditTitle}>
-                      <X className="w-4 h-4 text-gray-400" />
+                    <Button size="icon" variant="ghost" onClick={cancelEditTitle} className="h-8 w-8 rounded-full hover:bg-red-500/10 text-slate-400 flex-shrink-0">
+                      <X className="w-4 h-4" />
                     </Button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <h2 className="text-sm font-semibold text-gray-900 truncate">
+                    <h2 className="font-display text-sm font-semibold text-white truncate">
                       {selectedSession?.title}
                     </h2>
                     <button
                       onClick={startEditTitle}
-                      className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                      className="text-slate-400 hover:text-blue-400 transition-colors p-1 hover:bg-white/5 rounded-full flex-shrink-0"
                       aria-label="Edit session title"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 )}
-                {selectedSession && selectedSession.resumeAnalysisId && (
-                  <div className="flex items-center gap-2 flex-shrink-0">
+
+                {selectedSession?.resumeAnalysisId && (
+                  <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0 text-[10px] bg-blue-500/10 text-blue-300 px-2.5 py-1 rounded-full border border-blue-500/20 font-sans font-semibold">
+                    <Link className="w-3.5 h-3.5 text-blue-400" />
                     {(() => {
                       const linked = analyzedResumes.find(
                         (r) => r.analysis?.id === selectedSession.resumeAnalysisId
                       )
                       return linked ? (
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md truncate max-w-[160px]" title={linked.fileName}>
+                        <span className="truncate max-w-[130px]" title={linked.fileName}>
                           {linked.fileName}
                         </span>
-                      ) : null
+                      ) : (
+                        <span>Linked Resume</span>
+                      )
                     })()}
                   </div>
                 )}
               </div>
 
-              {/* Chat */}
-              <div className="flex-1 min-h-0 flex flex-col">
+              {/* Chat Viewport */}
+              <div className="flex-1 min-h-0 flex flex-col bg-transparent">
                 <ActiveSession
                   sessionId={selectedSessionId}
                   quickActionInput={quickActionInput}
@@ -234,67 +256,76 @@ export default function CoachPage() {
                 />
               </div>
 
-              {/* Quick actions */}
-              <div className="px-4 pb-2 border-t border-gray-100 pt-2">
+              {/* Prompt Suggestions */}
+              <div className="px-5 pb-3 border-t border-white/5 pt-2 flex-shrink-0 bg-transparent">
                 <QuickActions onAction={(text) => setQuickActionInput(text)} />
               </div>
-            </Card>
+            </div>
           )}
         </div>
       </div>
 
+      {/* New Session Dialog Box */}
       <Dialog open={newSessionOpen} onOpenChange={setNewSessionOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-3xl border border-white/5 bg-slate-950/95 backdrop-blur-md p-6 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>New Coaching Session</DialogTitle>
+            <DialogTitle className="font-display text-base font-semibold text-white">New Coaching Session</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 mt-2">
-            <div className="space-y-2">
-              <Label htmlFor="session-title">Session Title *</Label>
+          <div className="space-y-4 mt-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="session-title" className="text-xs font-semibold text-slate-400">Session Description Title *</Label>
               <Input
                 id="session-title"
-                placeholder="e.g. Resume review for SWE role"
+                placeholder="e.g. Mock interview for Staff Frontend role"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleCreateSession()}
+                className="glass-input h-10 text-xs focus-visible:ring-blue-500 font-sans"
               />
             </div>
-            <div className="space-y-2">
-              <Label>Link Resume (optional)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-400">Link Candidate Profile (optional)</Label>
               <Select value={newResumeId} onValueChange={setNewResumeId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a resume..." />
+                <SelectTrigger className="glass-input h-10 text-xs text-white focus:ring-blue-500">
+                  <SelectValue placeholder="Link with an analyzed resume..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-xl border-gray-200 dark:border-slate-800 dark:bg-slate-900">
                   {analyzedResumes.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
+                    <SelectItem key={r.id} value={r.id} className="text-xs rounded-lg dark:text-gray-200">
                       {r.fileName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Link Job Description (optional)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-400">Link Target Job (optional)</Label>
               <Select value={newJdId} onValueChange={setNewJdId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a JD..." />
+                <SelectTrigger className="glass-input h-10 text-xs text-white focus:ring-blue-500">
+                  <SelectValue placeholder="Match custom requirements..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-xl border-gray-200 dark:border-slate-800 dark:bg-slate-900">
                   {(jds ?? []).map((jd) => (
-                    <SelectItem key={jd.id} value={jd.id}>
+                    <SelectItem key={jd.id} value={jd.id} className="text-xs rounded-lg dark:text-gray-200">
                       {jd.title}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setNewSessionOpen(false)}>
+            <div className="flex justify-end gap-2.5 pt-2">
+              <Button variant="ghost" onClick={() => setNewSessionOpen(false)} className="btn btn-secondary rounded-full px-4">
                 Cancel
               </Button>
-              <Button onClick={handleCreateSession} disabled={!newTitle.trim() || isCreating}>
-                {isCreating ? 'Creating...' : 'Create Session'}
+              <Button onClick={handleCreateSession} disabled={!newTitle.trim() || isCreating} className="btn btn-primary rounded-full px-5">
+                {isCreating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Initializing...
+                  </>
+                ) : (
+                  'Begin Coaching'
+                )}
               </Button>
             </div>
           </div>
@@ -331,37 +362,42 @@ function SessionItem({
   isActive,
   onSelect,
   onDelete,
+  isDeleting,
 }: {
   session: CoachingSession
   isActive: boolean
   onSelect: () => void
   onDelete: () => void
+  isDeleting: boolean
 }) {
   return (
     <div
       className={cn(
-        'group flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors',
-        isActive ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-gray-100 text-gray-700'
+        'group flex items-center gap-3 px-3.5 py-2.5 rounded-xl cursor-pointer transition-all duration-200 border relative font-sans',
+        isActive
+          ? 'bg-blue-500/10 border-blue-500/20 text-blue-300 shadow-none'
+          : 'hover:bg-white/5 border-transparent text-slate-300'
       )}
       onClick={onSelect}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && onSelect()}
     >
-      <MessageSquare className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-indigo-500' : 'text-gray-400')} />
+      <MessageSquare className={cn('w-4 h-4 flex-shrink-0 transition-colors', isActive ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300')} />
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium truncate">{session.title}</p>
-        <p className="text-xs text-gray-400">{formatDate(session.updatedAt)}</p>
+        <p className="text-xs font-semibold truncate leading-tight">{session.title}</p>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 select-none font-sans">{formatDate(session.updatedAt)}</p>
       </div>
       <button
         onClick={(e) => {
           e.stopPropagation()
           onDelete()
         }}
-        className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-red-50/50 dark:hover:bg-red-950/20 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-all flex-shrink-0"
         aria-label="Delete session"
+        disabled={isDeleting}
       >
-        <Trash2 className="w-3.5 h-3.5" />
+        {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500 dark:text-red-400" /> : <Trash2 className="w-3.5 h-3.5" />}
       </button>
     </div>
   )

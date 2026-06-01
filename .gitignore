@@ -38,6 +38,13 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# ==============================================================================
+# Runtime / Application Logs
+# ==============================================================================
+# Ignore application runtime logs, but keep the intentional ML test-output logs.
+*.log
+!tests/output/logs/*.log
+
 # Compilation and builder caches
 .turbo/
 **/.turbo/

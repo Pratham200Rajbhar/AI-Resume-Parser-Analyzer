@@ -47,11 +47,6 @@ def _get_personal_pipeline():
     return _personal_pipeline
 
 
-def _get_nlp():
-    # Helper not needed for ML-only bias detector
-    pass
-
-
 class BiasDetector:
     """
     Detects potentially biased language in resume text.

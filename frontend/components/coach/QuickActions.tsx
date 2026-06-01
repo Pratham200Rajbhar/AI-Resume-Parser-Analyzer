@@ -37,10 +37,10 @@ export function QuickActions({ onAction }: QuickActionsProps) {
         <button
           key={action.label}
           onClick={() => onAction(action.text)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold glass hover:bg-blue-500/10 hover:text-blue-300 border border-white/5 text-slate-300 transition-all cursor-pointer select-none shadow-sm"
           aria-label={`Quick action: ${action.label}`}
         >
-          <action.icon className="w-3 h-3" />
+          <action.icon className="w-3 h-3 text-blue-400" />
           {action.label}
         </button>
       ))}

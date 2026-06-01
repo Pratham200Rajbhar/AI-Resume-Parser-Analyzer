@@ -15,7 +15,6 @@ logger = structlog.get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    import asyncio  # noqa: PLC0415
     import threading  # noqa: PLC0415
 
     configure_logging()

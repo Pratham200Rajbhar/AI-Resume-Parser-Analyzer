@@ -59,8 +59,19 @@ For each gap skill:
 2. Suggest the fastest way to acquire it (online course, project, certification)
 3. Recommend a specific resource (Coursera, Udemy, official docs, etc.)
 4. Estimate time to reach a job-ready level
+5. Suggest a hands-on project idea
 
-Format as a prioritised action plan the candidate can start this week.
+Return ONLY a JSON array, no prose, in exactly this shape:
+[
+  {
+    "skill": "<skill name>",
+    "importance": "<High|Medium|Low>",
+    "action": "<online course, project, certification>",
+    "resource": "<specific resource like Coursera, Udemy, docs>",
+    "time_estimate": "<e.g., 2 weeks>",
+    "project_idea": "<short project idea>"
+  }
+]
 """
 
 INTERVIEW_PREP_PROMPT = """Prepare the candidate for interviews for this role.
@@ -76,3 +87,33 @@ Provide:
 
 Be specific and reference actual items from the candidate's resume.
 """
+
+TAILOR_RESUME_PROMPT = """You are tailoring a candidate's resume to a specific job description to maximise ATS match and relevance, WITHOUT fabricating experience.
+
+Target role: {jd_title}{jd_company_clause}
+
+Keywords already matched in the resume: {matched_skills}
+Important keywords MISSING from the resume that appear in the JD: {gap_skills}
+
+The candidate's current experience bullets (grouped by role):
+{experience_block}
+
+Rewrite the resume to better target this role. Rules:
+- Naturally weave in the MISSING keywords above ONLY where they plausibly fit the candidate's real experience. Never invent employers, titles, dates, or accomplishments the candidate could not have had.
+- Rewrite each bullet using the STAR method (action + measurable result). Keep placeholders like "[X%]" where the candidate must fill in a real metric.
+- Mirror the language and priorities of the job description.
+- Also write a 3–4 line professional summary at the top that positions the candidate for THIS role.
+
+Return ONLY a JSON object, no prose, in exactly this shape:
+{{
+  "summary": "<the tailored professional summary>",
+  "experiences": [
+    {{
+      "company": "<company name, copied from input>",
+      "role": "<role title, copied from input>",
+      "rewritten_bullets": ["<bullet 1>", "<bullet 2>"]
+    }}
+  ]
+}}
+"""
+

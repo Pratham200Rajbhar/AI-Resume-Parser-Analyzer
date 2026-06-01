@@ -1,6 +1,6 @@
 from prisma.models import JdMatchResult, JobDescription
 
-from prisma import Prisma, Json
+from prisma import Json, Prisma
 
 
 class JdRepository:

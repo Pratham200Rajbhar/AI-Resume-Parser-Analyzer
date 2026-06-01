@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { KanbanBoard } from '@/components/workspace/KanbanBoard'
@@ -13,14 +13,28 @@ import { useUIStore } from '@/stores/ui'
 import { Plus, Sparkles } from 'lucide-react'
 import type { KanbanCandidate, KanbanColumn } from '@/types'
 
+interface WorkspaceCandidate {
+  id: string
+  resumeId: string
+  name: string
+  atsScore: number
+  matchScore: number
+  topSkills: string[]
+  notes: string
+  column: string
+  position: number
+  jobDescriptionId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export default function WorkspacePage() {
   const { addToast } = useUIStore()
+  const queryClient = useQueryClient()
   const [addOpen, setAddOpen] = useState(false)
   const [selectedResumeId, setSelectedResumeId] = useState('')
-  const [candidates, setCandidates] = useState<KanbanCandidate[]>([])
   const [activeJdId, setActiveJdId] = useState<string>('')
   const [isMatchingAll, setIsMatchingAll] = useState(false)
-  const [isMounted, setIsMounted] = useState(false)
 
   const { data: resumes } = useQuery({
     queryKey: ['resumes', 1, 100],
@@ -32,38 +46,50 @@ export default function WorkspacePage() {
     queryFn: () => api.jds.list(),
   })
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedCandidates = localStorage.getItem('workspace_candidates')
-      if (savedCandidates) {
-        try {
-          setCandidates(JSON.parse(savedCandidates))
-        } catch {
-          // ignore malformed
-        }
-      }
-      const savedJdId = localStorage.getItem('workspace_active_jd_id')
-      if (savedJdId) {
-        setActiveJdId(savedJdId)
-      }
-    }
-    setIsMounted(true)
-  }, [])
+  const { data: rawCandidates = [], isLoading } = useQuery<WorkspaceCandidate[]>({
+    queryKey: ['workspace-candidates'],
+    queryFn: () => api.workspace.listCandidates(),
+  })
 
-  // Auto-persist candidates to localStorage
-  useEffect(() => {
-    if (isMounted && typeof window !== 'undefined') {
-      localStorage.setItem('workspace_candidates', JSON.stringify(candidates))
-    }
-  }, [candidates, isMounted])
+  // Map API candidates to KanbanCandidate shape
+  const candidates: KanbanCandidate[] = rawCandidates.map((c) => ({
+    id: c.id,
+    resumeId: c.resumeId,
+    name: c.name,
+    atsScore: c.atsScore,
+    matchScore: c.matchScore,
+    topSkills: c.topSkills,
+    notes: c.notes,
+    column: c.column as KanbanColumn,
+  }))
 
-  // Auto-persist activeJdId to localStorage
-  useEffect(() => {
-    if (isMounted && typeof window !== 'undefined') {
-      localStorage.setItem('workspace_active_jd_id', activeJdId)
-    }
-  }, [activeJdId, isMounted])
+  const createMutation = useMutation({
+    mutationFn: (data: {
+      resumeId: string; name: string; atsScore: number; matchScore: number;
+      topSkills: string[]; column: string; jobDescriptionId?: string
+    }) =>
+      api.workspace.addCandidate({
+        resumeId: data.resumeId,
+        name: data.name,
+        atsScore: data.atsScore,
+        matchScore: data.matchScore,
+        topSkills: data.topSkills,
+        column: data.column,
+        jobDescriptionId: data.jobDescriptionId,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workspace-candidates'] }),
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { column?: string; notes?: string; position?: number; matchScore?: number } }) =>
+      api.workspace.updateCandidate(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workspace-candidates'] }),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.workspace.removeCandidate(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workspace-candidates'] }),
+  })
 
   const analyzedResumes = resumes?.items.filter((r) => r.status === 'ANALYZED') ?? []
 
@@ -71,27 +97,21 @@ export default function WorkspacePage() {
     const jdId = val === 'none' ? '' : val
     setActiveJdId(jdId)
 
-    if (!jdId) {
-      setCandidates((prev) => prev.map((c) => ({ ...c, matchScore: 0 })))
-      return
-    }
-
-    if (candidates.length === 0) return
+    if (!jdId || rawCandidates.length === 0) return
 
     setIsMatchingAll(true)
     try {
-      const updated = await Promise.all(
-        candidates.map(async (c) => {
+      await Promise.all(
+        rawCandidates.map(async (c) => {
           try {
             const res = await api.jds.match(jdId, c.resumeId)
-            return { ...c, matchScore: Math.round(res.matchScore * 100) }
-          } catch (err) {
-            console.error('Failed to match candidate:', c.name, err)
-            return { ...c, matchScore: 0 }
+            const score = Math.round(res.matchScore * 100)
+            await updateMutation.mutateAsync({ id: c.id, data: { matchScore: score } })
+          } catch {
+            // ignore individual failures
           }
         })
       )
-      setCandidates(updated)
       addToast({ title: 'Workspace updated with job match scores', variant: 'default' })
     } catch {
       addToast({ title: 'Failed to match some candidates', variant: 'destructive' })
@@ -104,17 +124,17 @@ export default function WorkspacePage() {
     const resume = analyzedResumes.find((r) => r.id === selectedResumeId)
     if (!resume || !resume.analysis) return
 
-    const alreadyAdded = candidates.some((c) => c.resumeId === selectedResumeId)
+    const alreadyAdded = rawCandidates.some((c) => c.resumeId === selectedResumeId)
     if (alreadyAdded) {
       addToast({ title: 'Candidate already in workspace', variant: 'destructive' })
       return
     }
 
     const entities = resume.analysis.entitiesJson
-    const topSkills = (entities.skills ?? [])
-      .sort((a, b) => b.confidence - a.confidence)
+    const topSkills = (entities?.skills ?? [])
+      .sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
       .slice(0, 3)
-      .map((s) => s.normalized)
+      .map((s) => s.normalized ?? s.raw ?? '')
 
     let matchScore = 0
     if (activeJdId) {
@@ -122,44 +142,38 @@ export default function WorkspacePage() {
       try {
         const res = await api.jds.match(activeJdId, resume.id)
         matchScore = Math.round(res.matchScore * 100)
-      } catch (err) {
-        console.error('Failed to match new candidate:', err)
+      } catch {
+        // ignore
       } finally {
         setIsMatchingAll(false)
       }
     }
 
-    const newCandidate: KanbanCandidate = {
-      id: Math.random().toString(36).slice(2),
+    await createMutation.mutateAsync({
       resumeId: resume.id,
-      name: entities.name ?? resume.fileName,
+      name: entities?.name ?? resume.fileName,
       atsScore: resume.analysis.atsScore,
       matchScore,
       topSkills,
-      notes: '',
       column: 'shortlisted',
-    }
+      jobDescriptionId: activeJdId || undefined,
+    })
 
-    setCandidates((prev) => [...prev, newCandidate])
     setAddOpen(false)
     setSelectedResumeId('')
     addToast({ title: 'Candidate added to workspace', variant: 'default' })
   }
 
   function handleMove(candidateId: string, column: KanbanColumn) {
-    setCandidates((prev) =>
-      prev.map((c) => (c.id === candidateId ? { ...c, column } : c))
-    )
+    updateMutation.mutate({ id: candidateId, data: { column } })
   }
 
   function handleUpdateNotes(candidateId: string, notes: string) {
-    setCandidates((prev) =>
-      prev.map((c) => (c.id === candidateId ? { ...c, notes } : c))
-    )
+    updateMutation.mutate({ id: candidateId, data: { notes } })
   }
 
   function handleRemove(candidateId: string) {
-    setCandidates((prev) => prev.filter((c) => c.id !== candidateId))
+    deleteMutation.mutate(candidateId)
   }
 
   return (
@@ -169,19 +183,19 @@ export default function WorkspacePage() {
         description="Organize and track candidates through your hiring pipeline"
       />
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-gray-150 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-card p-4 rounded-2xl shadow-lg border border-white/5">
         <div className="flex items-center gap-3 flex-1 max-w-md">
-          <Label htmlFor="active-jd-select" className="text-sm font-semibold text-gray-700 whitespace-nowrap">
+          <Label htmlFor="active-jd-select" className="text-xs font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
             Target Job:
           </Label>
           <Select value={activeJdId || 'none'} onValueChange={handleJdChange}>
-            <SelectTrigger id="active-jd-select" className="w-full">
+            <SelectTrigger id="active-jd-select" className="glass-input w-full h-10 text-xs text-white">
               <SelectValue placeholder="Select a job description to calculate matches..." />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No active job description (Clear matches)</SelectItem>
+            <SelectContent className="rounded-xl border-gray-200 dark:border-slate-800 dark:bg-slate-900">
+              <SelectItem value="none" className="text-xs dark:text-gray-200">No active job description</SelectItem>
               {(jds ?? []).map((jd) => (
-                <SelectItem key={jd.id} value={jd.id}>
+                <SelectItem key={jd.id} value={jd.id} className="text-xs dark:text-gray-200">
                   {jd.title} {jd.company ? `(${jd.company})` : ''}
                 </SelectItem>
               ))}
@@ -190,12 +204,12 @@ export default function WorkspacePage() {
         </div>
         <div className="flex items-center gap-3">
           {isMatchingAll && (
-            <div className="flex items-center gap-1 text-xs text-indigo-600 animate-pulse font-medium">
+            <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 animate-pulse font-semibold">
               <Sparkles className="w-3.5 h-3.5" />
               Calculating matches...
             </div>
           )}
-          <Button onClick={() => setAddOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+          <Button onClick={() => setAddOpen(true)} className="btn btn-primary rounded-full px-5 h-10">
             <Plus className="w-4 h-4 mr-2" />
             Add Candidate
           </Button>
@@ -210,36 +224,36 @@ export default function WorkspacePage() {
       />
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-3xl border border-white/5 bg-slate-950/95 backdrop-blur-md p-6 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Add Candidate to Workspace</DialogTitle>
+            <DialogTitle className="font-display text-lg font-semibold text-white">Add Candidate to Workspace</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div className="space-y-2">
-              <Label>Select Resume</Label>
+              <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Select Resume</Label>
               <Select value={selectedResumeId} onValueChange={setSelectedResumeId}>
-                <SelectTrigger>
+                <SelectTrigger className="glass-input h-10 text-xs text-white">
                   <SelectValue placeholder="Choose an analyzed resume..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-xl border-gray-200 dark:border-slate-800 dark:bg-slate-900">
                   {analyzedResumes.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.analysis?.entitiesJson.name ?? r.fileName}
+                    <SelectItem key={r.id} value={r.id} className="text-xs rounded-lg dark:text-gray-200">
+                      {r.analysis?.entitiesJson?.name ?? r.fileName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               {analyzedResumes.length === 0 && (
-                <p className="text-xs text-gray-500">
-                  No analyzed resumes available. Upload and analyze resumes first.
-                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-sans">No analyzed resumes available.</p>
               )}
             </div>
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setAddOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAddCandidate} disabled={!selectedResumeId || isMatchingAll} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => setAddOpen(false)} className="btn btn-secondary rounded-xl px-4 h-10">Cancel</Button>
+              <Button
+                onClick={handleAddCandidate}
+                disabled={!selectedResumeId || isMatchingAll || createMutation.isPending}
+                className="btn btn-primary rounded-xl px-5 h-10"
+              >
                 Add to Workspace
               </Button>
             </div>

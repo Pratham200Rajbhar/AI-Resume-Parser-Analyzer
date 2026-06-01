@@ -22,6 +22,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (typeof window !== 'undefined') {
       localStorage.setItem('access_token', access)
       localStorage.setItem('refresh_token', refresh)
+      document.cookie = `access_token=${access}; path=/; max-age=86400; SameSite=Lax`
+      document.cookie = `refresh_token=${refresh}; path=/; max-age=604800; SameSite=Lax`
     }
     set({ accessToken: access, refreshToken: refresh })
   },
@@ -32,6 +34,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (typeof window !== 'undefined') {
       localStorage.removeItem('access_token')
       localStorage.removeItem('refresh_token')
+      document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+      document.cookie = 'refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
     }
     set({ user: null, accessToken: null, refreshToken: null })
   },
@@ -40,6 +44,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (typeof window !== 'undefined') {
       const access = localStorage.getItem('access_token')
       const refresh = localStorage.getItem('refresh_token')
+      if (access) {
+        document.cookie = `access_token=${access}; path=/; max-age=86400; SameSite=Lax`
+      }
+      if (refresh) {
+        document.cookie = `refresh_token=${refresh}; path=/; max-age=604800; SameSite=Lax`
+      }
       set({
         accessToken: access,
         refreshToken: refresh,

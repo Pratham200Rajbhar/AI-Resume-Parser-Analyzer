@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import structlog
 

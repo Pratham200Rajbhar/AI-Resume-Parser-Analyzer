@@ -2,8 +2,8 @@ import asyncio
 import json
 
 import structlog
-from prisma import Json
 
+from prisma import Json
 
 logger = structlog.get_logger(__name__)
 
@@ -14,6 +14,7 @@ def _get_redis_conn():
     global _redis_conn
     if _redis_conn is None:
         import redis  # noqa: PLC0415
+
         from app.core.config import settings  # noqa: PLC0415
         _redis_conn = redis.from_url(settings.redis_url, decode_responses=True)
     return _redis_conn
@@ -124,8 +125,8 @@ async def _process_resume_async(
         logger.error("resume_processing_failed", resume_id=resume_id, error=str(exc))
         try:
             await db.resume.update(where={"id": resume_id}, data={"status": "FAILED"})
-        except Exception:
-            pass
+        except Exception as inner:
+            logger.error("resume_status_update_failed", resume_id=resume_id, error=str(inner))
         _publish_sync(job_id, "ERROR", {"resume_id": resume_id, "error": str(exc)})
         raise
 
