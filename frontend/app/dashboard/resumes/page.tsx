@@ -34,7 +34,7 @@ export default function ResumesPage() {
     queryFn: () => api.resumes.list(page, PAGE_SIZE, sortBy, sortOrder, statusFilter || undefined),
     refetchInterval: (query) => {
       const items = query.state.data?.items ?? []
-      const hasProcessing = items.some((r: any) => r.status === 'PROCESSING' || r.status === 'PARSED' || r.status === 'PENDING')
+      const hasProcessing = items.some((r) => r.status === 'PARSING' || r.status === 'ANALYZING' || r.status === 'PENDING')
       return hasProcessing ? 3000 : false
     }
   })

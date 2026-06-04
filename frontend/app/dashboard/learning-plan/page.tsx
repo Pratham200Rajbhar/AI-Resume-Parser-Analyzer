@@ -12,6 +12,7 @@ import { useUIStore } from '@/stores/ui'
 import { api } from '@/lib/api'
 import { GraduationCap, Clock, ExternalLink, Lightbulb, Loader2, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { LearningPlan, LearningPlanItem } from '@/types'
 
 export default function LearningPlanPage() {
   const { addToast } = useUIStore()
@@ -29,7 +30,7 @@ export default function LearningPlanPage() {
     queryFn: () => api.jds.list(),
   })
 
-  const { data: learningPlans, isLoading: loadingPlans } = useQuery({
+  const { data: learningPlans, isLoading: loadingPlans } = useQuery<LearningPlan[]>({
     queryKey: ['learningPlans'],
     queryFn: () => api.learningPlans.list(),
   })
@@ -44,8 +45,8 @@ export default function LearningPlanPage() {
         variant: 'default',
       })
     },
-    onError: (err: any) => {
-      const detail = err?.response?.data?.detail
+    onError: (err: unknown) => {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
       addToast({
         title: 'Generation failed',
         description: detail ?? 'Failed to generate learning plan. Did you run match analysis first?',
@@ -151,62 +152,67 @@ export default function LearningPlanPage() {
         </Card>
       ) : (
         <div className="grid gap-6">
-          {learningPlans?.map((plan: any) => (
-            <Card key={plan.id} className="rounded-2xl border border-gray-100 dark:border-slate-800/60 bg-white/60 dark:bg-slate-900/40 shadow-sm overflow-hidden">
-              <CardHeader className="p-6 pb-4 flex flex-row items-start justify-between bg-gray-50/50 dark:bg-slate-800/20 border-b border-gray-100 dark:border-slate-800/60">
-                <div>
-                  <CardTitle className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <GraduationCap className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                    {plan.title}
-                  </CardTitle>
-                  <CardDescription className="mt-1 text-xs">
-                    Created on {new Date(plan.createdAt).toLocaleDateString()}
-                  </CardDescription>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-gray-400 hover:text-red-600 transition-colors"
-                  onClick={() => deleteMutation.mutate(plan.id)}
-                  disabled={deleteMutation.isPending}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {(typeof plan.planJson === 'string' ? JSON.parse(plan.planJson) : plan.planJson).map((item: any, idx: number) => (
-                    <div key={idx} className="p-4 rounded-xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col md:flex-row gap-4 items-start md:items-center">
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-3">
-                          <h4 className="font-semibold text-gray-900 dark:text-white">{item.skill}</h4>
-                          {getImportanceBadge(item.importance)}
+          {learningPlans?.map((plan: LearningPlan) => {
+            const items: LearningPlanItem[] = typeof plan.planJson === 'string'
+              ? JSON.parse(plan.planJson)
+              : plan.planJson
+            return (
+              <Card key={plan.id} className="rounded-2xl border border-gray-100 dark:border-slate-800/60 bg-white/60 dark:bg-slate-900/40 shadow-sm overflow-hidden">
+                <CardHeader className="p-6 pb-4 flex flex-row items-start justify-between bg-gray-50/50 dark:bg-slate-800/20 border-b border-gray-100 dark:border-slate-800/60">
+                  <div>
+                    <CardTitle className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <GraduationCap className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                      {plan.title}
+                    </CardTitle>
+                    <CardDescription className="mt-1 text-xs">
+                      Created on {new Date(plan.createdAt).toLocaleDateString()}
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-gray-400 hover:text-red-600 transition-colors"
+                    onClick={() => deleteMutation.mutate(plan.id)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    {items.map((item: LearningPlanItem, idx: number) => (
+                      <div key={idx} className="p-4 rounded-xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col md:flex-row gap-4 items-start md:items-center">
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center gap-3">
+                            <h4 className="font-semibold text-gray-900 dark:text-white">{item.skill}</h4>
+                            {getImportanceBadge(item.importance)}
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                            <span className="font-medium text-gray-700 dark:text-gray-300">{item.action}</span>
+                            &bull;
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5" />
+                              {item.timeEstimate || item.time_estimate}
+                            </span>
+                          </p>
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                          <span className="font-medium text-gray-700 dark:text-gray-300">{item.action}</span>
-                          &bull;
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5" />
-                            {item.timeEstimate || item.time_estimate}
-                          </span>
-                        </p>
+                        <div className="flex flex-col gap-2 w-full md:w-auto">
+                          <div className="text-xs bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-slate-700/50 text-gray-700 dark:text-gray-300 flex gap-2 items-start max-w-sm">
+                            <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                            <span>{item.projectIdea || item.project_idea}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400">
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            {item.resource}
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex flex-col gap-2 w-full md:w-auto">
-                        <div className="text-xs bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-slate-700/50 text-gray-700 dark:text-gray-300 flex gap-2 items-start max-w-sm">
-                          <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                          <span>{item.projectIdea || item.project_idea}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400">
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          {item.resource}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       )}
     </div>

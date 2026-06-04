@@ -11,6 +11,7 @@ import type {
   CoachingSession,
   ChatMessage,
   PaginatedResponse,
+  LearningPlan,
 } from '@/types'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
@@ -488,11 +489,11 @@ export const api = {
       files: File[],
       jdId?: string,
       onProgress?: (pct: number) => void
-    ): Promise<BatchJob> => {
+    ): Promise<{ batchId: string; accepted: number; jobId: string }> => {
       const formData = new FormData()
       files.forEach((file) => formData.append('files', file))
       if (jdId) formData.append('job_description_id', jdId)
-      const response = await axiosInstance.post<BatchJob>(`/batches/${batchId}/upload`, formData, {
+      const response = await axiosInstance.post<{ batchId: string; accepted: number; jobId: string }>(`/batches/${batchId}/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent: AxiosProgressEvent) => {
           if (progressEvent.total && onProgress) {
@@ -691,6 +692,18 @@ export const api = {
         job_description_id: jobDescriptionId,
         tone,
         word_count: wordCount,
+      })
+      return response.data
+    },
+
+    update: async (
+      id: string,
+      input: { content?: string; title?: string; tone?: string }
+    ): Promise<CoverLetter> => {
+      const response = await axiosInstance.patch<CoverLetter>(`/cover-letters/${id}`, {
+        content: input.content,
+        title: input.title,
+        tone: input.tone,
       })
       return response.data
     },
@@ -916,6 +929,14 @@ export const api = {
     removeMember: async (teamId: string, memberId: string): Promise<void> => {
       await axiosInstance.delete(`/teams/${teamId}/members/${memberId}`)
     },
+
+    inviteByEmail: async (teamId: string, email: string, role = 'VIEWER'): Promise<TeamMember> => {
+      const response = await axiosInstance.post<TeamMember>(`/teams/${teamId}/invite-by-email`, {
+        email,
+        role,
+      })
+      return response.data
+    },
   },
 
   tailoring: {
@@ -934,26 +955,35 @@ export const api = {
   },
 
   learningPlans: {
-    generate: async (resumeId: string, jobDescriptionId: string): Promise<Record<string, unknown>> => {
-      const response = await axiosInstance.post('/learning-plans/generate', {
+    generate: async (resumeId: string, jobDescriptionId: string): Promise<LearningPlan> => {
+      const response = await axiosInstance.post<LearningPlan>('/learning-plans/generate', {
         resume_id: resumeId,
         job_description_id: jobDescriptionId,
       })
       return response.data
     },
 
-    list: async (): Promise<Record<string, unknown>[]> => {
-      const response = await axiosInstance.get('/learning-plans')
+    list: async (): Promise<LearningPlan[]> => {
+      const response = await axiosInstance.get<LearningPlan[]>('/learning-plans')
       return response.data
     },
 
-    get: async (planId: string): Promise<Record<string, unknown>> => {
-      const response = await axiosInstance.get(`/learning-plans/${planId}`)
+    get: async (planId: string): Promise<LearningPlan> => {
+      const response = await axiosInstance.get<LearningPlan>(`/learning-plans/${planId}`)
       return response.data
     },
 
     remove: async (planId: string): Promise<void> => {
       await axiosInstance.delete(`/learning-plans/${planId}`)
+    },
+  },
+
+  users: {
+    search: async (q: string): Promise<{ id: string; email: string; fullName: string | null }[]> => {
+      const response = await axiosInstance.get<{ id: string; email: string; fullName: string | null }[]>('/auth/users/search', {
+        params: { q },
+      })
+      return response.data
     },
   },
 }

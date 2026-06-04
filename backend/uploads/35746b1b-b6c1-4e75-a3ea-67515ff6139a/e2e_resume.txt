@@ -1,0 +1,14 @@
+John Smith
+john.smith@email.com | LinkedIn: linkedin.com/in/johnsmith
+
+EXPERIENCE
+Software Engineer — Acme Corp (2021–2024)
+- Developed REST APIs using Python and FastAPI serving 100k daily users
+- Led migration to PostgreSQL reducing query times by 40%
+- Built CI/CD pipelines with GitHub Actions and Docker
+
+EDUCATION
+B.S. Computer Science — State University (2021)
+
+SKILLS
+Python, FastAPI, PostgreSQL, Docker, React, TypeScript, AWS, Git

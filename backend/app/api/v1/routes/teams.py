@@ -147,3 +147,33 @@ async def remove_member(
     if m is None or m.teamId != team_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
     await db.teammember.delete(where={"id": member_id})
+
+
+class InviteByEmail(BaseModel):
+    email: str
+    role: str = "VIEWER"
+
+
+@router.post("/{team_id}/invite-by-email", response_model=MemberResponse, status_code=status.HTTP_201_CREATED)
+async def invite_by_email(
+    team_id: str,
+    body: InviteByEmail,
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> MemberResponse:
+    requester = await db.teammember.find_first(where={"teamId": team_id, "userId": current_user.id})
+    if requester is None or requester.role not in ("OWNER", "ADMIN"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+
+    target = await db.user.find_unique(where={"email": body.email})
+    if target is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No user found with that email address")
+
+    existing = await db.teammember.find_first(where={"teamId": team_id, "userId": target.id})
+    if existing:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User is already a team member")
+
+    m = await db.teammember.create(data={"teamId": team_id, "userId": target.id, "role": body.role})
+    logger.info("team_member_invited", team_id=team_id, invitee_id=target.id, invited_by=current_user.id)
+    return MemberResponse(id=m.id, user_id=m.userId, team_id=m.teamId, role=m.role, created_at=m.createdAt)
+

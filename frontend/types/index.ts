@@ -211,3 +211,25 @@ export interface KanbanCandidate {
 }
 
 export type KanbanColumn = 'shortlisted' | 'under_review' | 'rejected' | 'hired'
+
+export interface LearningPlanItem {
+  skill: string
+  importance: 'high' | 'medium' | 'low' | string
+  action: string
+  timeEstimate?: string
+  time_estimate?: string
+  projectIdea?: string
+  project_idea?: string
+  resource: string
+}
+
+export interface LearningPlan {
+  id: string
+  resumeId: string
+  jobDescriptionId: string | null
+  title: string
+  planJson: LearningPlanItem[] | string
+  createdAt: string
+  updatedAt: string
+}
+

@@ -86,7 +86,7 @@ export default function DashboardPage() {
     queryFn: () => api.resumes.list(1, 5),
     refetchInterval: (query) => {
       const items = query.state.data?.items ?? []
-      const hasProcessing = items.some((r: any) => r.status === 'PROCESSING' || r.status === 'PARSED' || r.status === 'PENDING')
+      const hasProcessing = items.some((r) => r.status === 'PARSING' || r.status === 'ANALYZING' || r.status === 'PENDING')
       return hasProcessing ? 3000 : false
     }
   })
@@ -101,7 +101,7 @@ export default function DashboardPage() {
     queryFn: () => api.batches.list(),
     refetchInterval: (query) => {
       const list = query.state.data ?? []
-      const hasInProgress = list.some((b: any) => b.status === 'IN_PROGRESS' || b.status === 'PENDING')
+      const hasInProgress = list.some((b) => b.status === 'IN_PROGRESS')
       return hasInProgress ? 3000 : false
     }
   })

@@ -1,0 +1,12 @@
+
+John Doe
+Email: john.doe@example.com
+Phone: 555-0199
+
+B.S. Computer Science — State University (2021)
+
+Acme Corp - 2021 to Present
+- Developed REST APIs using Python and FastAPI serving 100k daily users
+- Led migration to PostgreSQL reducing query times by 40%
+
+Skills: Python, FastAPI, PostgreSQL, Docker, AWS, Git

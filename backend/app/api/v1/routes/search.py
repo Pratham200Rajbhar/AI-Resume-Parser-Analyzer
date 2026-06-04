@@ -20,16 +20,24 @@ async def global_search(
     results: dict = {}
 
     if "resumes" in requested:
-        resumes = await db.resume.find_many(
+        # Single query: match by filename OR by candidate name stored in analysis JSON
+        all_matching = await db.resume.find_many(
             where={
                 "userId": current_user.id,
-                "fileName": {"contains": q, "mode": "insensitive"},
+                "OR": [
+                    {"fileName": {"contains": q, "mode": "insensitive"}},
+                    {"analysis": {"is": {"entitiesJson": {"path": ["name"], "string_contains": q}}}},
+                ],
             },
             take=10,
             include={"analysis": True},
         )
         resume_results = []
-        for r in resumes:
+        seen_ids: set[str] = set()
+        for r in all_matching:
+            if r.id in seen_ids:
+                continue
+            seen_ids.add(r.id)
             name = None
             if r.analysis:
                 entities = r.analysis.entitiesJson or {}
@@ -41,24 +49,8 @@ async def global_search(
                 "subtitle": name,
                 "href": f"/dashboard/resumes/{r.id}",
             })
-        # Also search by candidate name in analysis
-        all_resumes = await db.resume.find_many(
-            where={"userId": current_user.id},
-            include={"analysis": True},
-        )
-        for r in all_resumes:
-            if r.analysis:
-                entities = r.analysis.entitiesJson or {}
-                name = entities.get("name", "")
-                if name and q.lower() in name.lower() and not any(x["id"] == r.id for x in resume_results):
-                    resume_results.append({
-                        "id": r.id,
-                        "type": "resume",
-                        "title": r.fileName,
-                        "subtitle": name,
-                        "href": f"/dashboard/resumes/{r.id}",
-                    })
-        results["resumes"] = resume_results[:10]
+        results["resumes"] = resume_results
+
 
     if "jds" in requested:
         jds = await db.jobdescription.find_many(

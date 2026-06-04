@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useUIStore } from '@/stores/ui'
 import { api } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
-import { Users, Plus, Trash2, Shield } from 'lucide-react'
+import { Users, Plus, Trash2, Shield, Search, UserPlus, Loader2 } from 'lucide-react'
 
 interface Team {
   id: string
@@ -43,8 +43,11 @@ export default function TeamSettingsPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [teamName, setTeamName] = useState('')
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
-  const [inviteUserId, setInviteUserId] = useState('')
+  const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('VIEWER')
+  const [searchResults, setSearchResults] = useState<{ id: string; email: string; fullName: string | null }[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: teams = [], isLoading } = useQuery<Team[]>({
     queryKey: ['teams'],
@@ -77,16 +80,36 @@ export default function TeamSettingsPage() {
     },
   })
 
-  const addMemberMutation = useMutation({
-    mutationFn: ({ teamId, userId, role }: { teamId: string; userId: string; role: string }) =>
-      api.teams.addMember(teamId, userId, role),
+  const inviteMutation = useMutation({
+    mutationFn: ({ teamId, email, role }: { teamId: string; email: string; role: string }) =>
+      api.teams.inviteByEmail(teamId, email, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team-members', selectedTeam?.id] })
-      setInviteUserId('')
-      addToast({ title: 'Member added', variant: 'default' })
+      setInviteEmail('')
+      setSearchResults([])
+      addToast({ title: 'Member invited', variant: 'default' })
     },
-    onError: () => addToast({ title: 'Failed to add member', variant: 'destructive' }),
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      addToast({ title: msg ?? 'Failed to invite member', variant: 'destructive' })
+    },
   })
+
+  function handleEmailSearch(q: string) {
+    setInviteEmail(q)
+    if (searchTimeout) clearTimeout(searchTimeout)
+    if (q.length < 2) { setSearchResults([]); return }
+    setIsSearching(true)
+    const t = setTimeout(async () => {
+      try {
+        const results = await api.users.search(q)
+        setSearchResults(results)
+      } finally {
+        setIsSearching(false)
+      }
+    }, 300)
+    setSearchTimeout(t)
+  }
 
   const removeMemberMutation = useMutation({
     mutationFn: ({ teamId, memberId }: { teamId: string; memberId: string }) =>
@@ -162,32 +185,55 @@ export default function TeamSettingsPage() {
               <CardContent className="space-y-4">
                 {/* Invite */}
                 <div className="space-y-2">
-                  <Label className="text-xs">Invite Member (by User ID)</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="User ID"
-                      value={inviteUserId}
-                      onChange={(e) => setInviteUserId(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Select value={inviteRole} onValueChange={setInviteRole}>
-                      <SelectTrigger className="w-28">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {['VIEWER', 'REVIEWER', 'ADMIN'].map((r) => (
-                          <SelectItem key={r} value={r}>{r}</SelectItem>
+                  <Label className="text-xs font-semibold text-gray-600 dark:text-gray-400">Invite Member by Email</Label>
+                  <div className="relative">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        <Input
+                          placeholder="Search by email address..."
+                          value={inviteEmail}
+                          onChange={(e) => handleEmailSearch(e.target.value)}
+                          className="pl-9 h-10 text-xs rounded-xl border-gray-200 dark:border-slate-800 bg-transparent dark:text-white"
+                        />
+                        {isSearching && (
+                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin" />
+                        )}
+                      </div>
+                      <Select value={inviteRole} onValueChange={setInviteRole}>
+                        <SelectTrigger className="w-28 h-10 text-xs rounded-xl border-gray-200 dark:border-slate-800 bg-transparent dark:text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-gray-200 dark:border-slate-800 dark:bg-slate-900">
+                          {['VIEWER', 'REVIEWER', 'ADMIN'].map((r) => (
+                            <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        onClick={() => inviteMutation.mutate({ teamId: selectedTeam.id, email: inviteEmail, role: inviteRole })}
+                        disabled={!inviteEmail.includes('@') || inviteMutation.isPending}
+                        className="h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 shadow-sm"
+                      >
+                        {inviteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    {/* Search results dropdown */}
+                    {searchResults.length > 0 && (
+                      <div className="absolute top-full mt-1 left-0 right-0 z-20 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg overflow-hidden">
+                        {searchResults.map((u) => (
+                          <button
+                            key={u.id}
+                            className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                            onClick={() => { setInviteEmail(u.email); setSearchResults([]) }}
+                          >
+                            <p className="text-xs font-semibold text-gray-900 dark:text-white">{u.email}</p>
+                            {u.fullName && <p className="text-[10px] text-gray-400 dark:text-gray-500">{u.fullName}</p>}
+                          </button>
                         ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      size="sm"
-                      onClick={() => addMemberMutation.mutate({ teamId: selectedTeam.id, userId: inviteUserId, role: inviteRole })}
-                      disabled={!inviteUserId || addMemberMutation.isPending}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                    >
-                      Add
-                    </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -195,11 +241,11 @@ export default function TeamSettingsPage() {
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-gray-500">Members ({members.length})</p>
                   {members.map((m) => (
-                    <div key={m.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
+                    <div key={m.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-slate-800/60 hover:bg-gray-50/50 dark:hover:bg-slate-800/20 transition-colors">
                       <div className="flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-gray-400" />
-                        <span className="text-xs font-mono text-gray-600">{m.userId.slice(0, 12)}...</span>
-                        <Badge className={`text-xs ${ROLE_COLORS[m.role] ?? 'bg-gray-100 text-gray-700'}`}>
+                        <Shield className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                        <span className="text-xs text-gray-700 dark:text-gray-300 font-mono">{m.userId.slice(0, 8)}…</span>
+                        <Badge className={`text-xs shadow-none ${ROLE_COLORS[m.role] ?? 'bg-gray-100 text-gray-700'}`}>
                           {m.role}
                         </Badge>
                       </div>

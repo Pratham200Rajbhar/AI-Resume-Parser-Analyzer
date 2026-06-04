@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { useUIStore } from '@/stores/ui'
 import { api } from '@/lib/api'
-import { Copy, Download, Trash2, FileText, Sparkles, Mail, Eye, Clock, Check, Loader2 } from 'lucide-react'
+import { Copy, Download, Trash2, FileText, Sparkles, Mail, Eye, Clock, Check, Loader2, Save } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface CoverLetter {
@@ -86,6 +86,17 @@ export default function CoverLettersPage() {
       addToast({ title: 'Cover letter deleted', variant: 'default' })
     },
     onError: () => addToast({ title: 'Failed to delete letter', variant: 'destructive' }),
+  })
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      api.coverLetters.update(selectedLetter!.id, { content: editContent }),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ['cover-letters'] })
+      setSelectedLetter(updated)
+      addToast({ title: 'Changes saved', variant: 'default' })
+    },
+    onError: () => addToast({ title: 'Failed to save changes', variant: 'destructive' }),
   })
 
   const analyzedResumes = resumes?.items.filter((r) => r.status === 'ANALYZED') ?? []
@@ -293,6 +304,15 @@ export default function CoverLettersPage() {
                   >
                     <Download className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                     Download
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 flex items-center gap-1.5 shadow-sm"
+                    onClick={() => saveMutation.mutate()}
+                    disabled={saveMutation.isPending || editContent === selectedLetter?.content}
+                  >
+                    {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Save
                   </Button>
                   <div className="w-px h-5 bg-gray-200 dark:bg-slate-800 mx-1" />
                   <Button

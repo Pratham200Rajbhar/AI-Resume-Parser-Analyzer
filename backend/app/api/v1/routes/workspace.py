@@ -6,7 +6,7 @@ from prisma.models import User
 from pydantic import BaseModel, ConfigDict
 
 from app.api.deps import get_current_user, get_db
-from prisma import Prisma
+from prisma import Json, Prisma
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/workspace", tags=["workspace"])
@@ -111,7 +111,7 @@ async def create_candidate(
             "name": body.name,
             "atsScore": body.ats_score,
             "matchScore": body.match_score,
-            "topSkills": body.top_skills,
+            "topSkills": Json(body.top_skills),
             "notes": body.notes,
             "column": body.column,
             "position": body.position,

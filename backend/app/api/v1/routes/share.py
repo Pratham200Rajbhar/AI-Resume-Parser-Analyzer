@@ -1,3 +1,4 @@
+import json as _json
 import secrets
 from datetime import UTC, datetime
 
@@ -46,16 +47,18 @@ async def create_share_link(
         import hashlib
         password_hash = hashlib.sha256(body.password.encode()).hexdigest()
 
+
     link = await db.sharelink.create(data={
         "resumeId": resume_id,
         "userId": current_user.id,
         "token": token,
-        "visibleSections": body.visible_sections,
+        "visibleSections": _json.dumps(body.visible_sections),
         "passwordHash": password_hash,
         "expiresAt": body.expires_at,
     })
     return ShareLinkResponse(
-        id=link.id, token=link.token, visible_sections=link.visibleSections or [],
+        id=link.id, token=link.token,
+        visible_sections=_json.loads(link.visibleSections) if isinstance(link.visibleSections, str) else (link.visibleSections or []),
         expires_at=link.expiresAt, view_count=link.viewCount, created_at=link.createdAt,
     )
 

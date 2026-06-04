@@ -16,7 +16,7 @@ async def get_summary(
     db: Prisma = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    now = datetime.now(UTC).replace(tzinfo=None)  # Prisma returns naive UTC datetimes
+    now = datetime.now(UTC)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
     # All analyzed resumes for this user
@@ -29,9 +29,14 @@ async def get_summary(
     total = len(resumes)
     avg_score = round(sum(r.analysis.atsScore for r in analyzed) / len(analyzed)) if analyzed else 0
 
+    def _as_utc(dt: datetime) -> datetime:
+        """Ensure datetime is timezone-aware (UTC). Prisma may return either."""
+        return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
+
     # Highest score this month
-    this_month = [r for r in analyzed if r.createdAt >= month_start]
+    this_month = [r for r in analyzed if _as_utc(r.createdAt) >= month_start]
     highest_this_month = max((r.analysis.atsScore for r in this_month), default=0)
+
 
     # Status counts
     status_counts = {}

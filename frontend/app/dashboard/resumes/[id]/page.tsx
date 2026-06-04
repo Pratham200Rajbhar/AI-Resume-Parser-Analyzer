@@ -28,6 +28,11 @@ import {
   ShieldAlert,
   ChevronDown,
   ChevronUp,
+  History,
+  Wand2,
+  Copy,
+  Check,
+  Loader2,
 } from 'lucide-react'
 import type { JdMatchResult } from '@/types'
 
@@ -42,6 +47,10 @@ export default function ResumeDetailPage() {
   const [isMatching, setIsMatching] = useState(false)
   const [biasOpen, setBiasOpen] = useState(false)
   const [fraudOpen, setFraudOpen] = useState(false)
+  const [rewriteBullet, setRewriteBullet] = useState<string>('')
+  const [rewriteResults, setRewriteResults] = useState<{ text: string; reason: string }[]>([])
+  const [isRewriting, setIsRewriting] = useState(false)
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
 
   const { data: resume, isLoading: resumeLoading } = useQuery({
     queryKey: ['resume', resumeId],
@@ -85,6 +94,26 @@ export default function ResumeDetailPage() {
     } finally {
       setIsMatching(false)
     }
+  }
+
+  async function handleRewriteBullet() {
+    if (!rewriteBullet.trim()) return
+    setIsRewriting(true)
+    setRewriteResults([])
+    try {
+      const result = await api.resumes.rewriteBullet(resumeId, rewriteBullet)
+      setRewriteResults(result.alternatives ?? [])
+    } catch {
+      addToast({ title: 'Rewrite failed', description: 'Could not reach AI rewriter.', variant: 'destructive' })
+    } finally {
+      setIsRewriting(false)
+    }
+  }
+
+  function copyAlternative(text: string, idx: number) {
+    navigator.clipboard.writeText(text)
+    setCopiedIdx(idx)
+    setTimeout(() => setCopiedIdx(null), 2000)
   }
 
   if (resumeLoading || analysisLoading) {
@@ -134,6 +163,12 @@ export default function ResumeDetailPage() {
             <Badge className={cn(getStatusColor(resume.status))}>
               {getStatusLabel(resume.status)}
             </Badge>
+            <Link href={`/dashboard/resumes/${resumeId}/versions`}>
+              <Button variant="outline" size="sm">
+                <History className="w-4 h-4 mr-2" />
+                History
+              </Button>
+            </Link>
             {analysis && (
               <Button variant="outline" size="sm" onClick={handleExportPdf}>
                 <Download className="w-4 h-4 mr-2" />
@@ -240,6 +275,76 @@ export default function ResumeDetailPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* AI Bullet Rewriter */}
+          {analysis && (
+            <Card className="glass-card border border-[#e0e0e0]/40 dark:border-white/5 bg-white/60 dark:bg-slate-900/30 rounded-2xl shadow-sm">
+              <CardHeader className="pb-2 px-5 pt-5">
+                <CardTitle className="text-sm font-semibold text-gray-950 dark:text-white flex items-center gap-2">
+                  <Wand2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  AI Bullet Rewriter
+                </CardTitle>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Paste any resume bullet point and get 3 AI-improved alternatives.
+                </p>
+              </CardHeader>
+              <CardContent className="px-5 pb-5 space-y-4">
+                <div className="flex gap-2">
+                  <textarea
+                    value={rewriteBullet}
+                    onChange={(e) => setRewriteBullet(e.target.value)}
+                    placeholder="e.g. Managed a team and improved performance..."
+                    rows={2}
+                    className="flex-1 text-xs rounded-xl border border-gray-200 dark:border-slate-700 bg-transparent dark:text-white px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 font-sans"
+                  />
+                  <Button
+                    onClick={handleRewriteBullet}
+                    disabled={!rewriteBullet.trim() || isRewriting}
+                    className="rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 h-auto shadow-sm self-start mt-0.5"
+                  >
+                    {isRewriting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Wand2 className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+                {rewriteResults.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">AI Alternatives</p>
+                    {rewriteResults.map((alt, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-3 p-3 rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30 group"
+                      >
+                        <span className="w-5 h-5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="flex-1 text-xs text-gray-700 dark:text-gray-300 leading-relaxed font-sans">{alt.text}</p>
+                          {alt.reason && (
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 italic">{alt.reason}</p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => copyAlternative(alt.text, idx)}
+                          className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
+                        >
+                          {copiedIdx === idx ? (
+                            <Check className="w-3.5 h-3.5 text-green-500" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+
 
           {/* JD Match */}
           <Card>

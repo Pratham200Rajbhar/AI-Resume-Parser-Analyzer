@@ -152,3 +152,41 @@ async def delete_cover_letter(
     if letter is None or letter.userId != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cover letter not found")
     await db.coverletter.delete(where={"id": letter_id})
+
+
+class CoverLetterUpdate(BaseModel):
+    content: str | None = None
+    title: str | None = None
+    tone: str | None = None
+
+
+@router.patch("/{letter_id}", response_model=CoverLetterResponse)
+async def update_cover_letter(
+    letter_id: str,
+    body: CoverLetterUpdate,
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CoverLetterResponse:
+    letter = await db.coverletter.find_unique(where={"id": letter_id})
+    if letter is None or letter.userId != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cover letter not found")
+
+    update_data = {}
+    if body.content is not None:
+        update_data["content"] = body.content
+        update_data["wordCount"] = len(body.content.split())
+    if body.title is not None:
+        update_data["title"] = body.title
+    if body.tone is not None:
+        update_data["tone"] = body.tone
+
+    if update_data:
+        letter = await db.coverletter.update(where={"id": letter_id}, data=update_data)
+
+    logger.info("cover_letter_updated", letter_id=letter.id, user_id=current_user.id)
+    return CoverLetterResponse(
+        id=letter.id, resume_id=letter.resumeId, job_description_id=letter.jobDescriptionId,
+        title=letter.title, content=letter.content, tone=letter.tone, word_count=letter.wordCount,
+        created_at=letter.createdAt, updated_at=letter.updatedAt,
+    )
+

@@ -76,8 +76,8 @@ export default function TailoringStudioPage() {
         variant: 'default',
       })
     },
-    onError: (err: any) => {
-      const detail = err?.response?.data?.detail
+    onError: (err: unknown) => {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
       addToast({
         title: 'Tailoring failed',
         description: detail ?? 'The tailoring service is unavailable. Please try again.',

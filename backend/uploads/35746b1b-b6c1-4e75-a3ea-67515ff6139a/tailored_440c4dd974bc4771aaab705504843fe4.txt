@@ -1,0 +1,18 @@
+john
+john.smith@email.com
+
+SUMMARY
+Senior Backend Engineer with over 3 years of experience building and scaling high-performance microservices. Proficient in Python, FastAPI, PostgreSQL, Docker, and AWS, with a proven track record of leading backend migrations and optimizing critical data systems. Seeking to leverage expertise in REST API development and cloud infrastructure to contribute to TechCorp's engineering team.
+
+SKILLS
+email, C++, linked, software, engineer, ##me, Rust, AWS, AWS, Python, Rust, ##ap, ##i, serving, migration, Rust, ##gre, SQL, CI/CD, C++, pipeline, Go, ##th, ##ub, actions, Docker, ##er, education, ##q, SQL, React, types, ##cript, AWS, Git, FastAPI, PostgreSQL, Docker, TypeScript, AWS, Git
+
+EXPERIENCE
+- Developed REST APIs using Python and FastAPI serving 100k daily users at Acme Corp
+• Designed and implemented a high-performance backend REST API using Python and FastAPI as part of a microservices architecture, serving 100k daily users and achieving [X%] uptime.
+• Led the migration of the backend data layer to PostgreSQL, optimizing critical SQL queries and improving overall query performance by 40%.
+at GitHub
+• [Describe your responsibilities at GitHub, focusing on backend systems, Docker, and AWS, and quantify your impact with a specific metric.]
+
+EDUCATION
+b B.S. Computer Science — State University (2021)

@@ -53,6 +53,7 @@ class UserResponse(BaseModel):
     id: str
     email: str
     full_name: str | None
+    avatar_url: str | None
     created_at: datetime
 
 
@@ -123,5 +124,29 @@ async def me(current_user: User = Depends(get_current_user)) -> UserResponse:
         id=current_user.id,
         email=current_user.email,
         full_name=current_user.fullName,
+        avatar_url=current_user.avatarUrl,
         created_at=current_user.createdAt,
     )
+
+
+class UserSearchResult(BaseModel):
+    id: str
+    email: str
+    full_name: str | None
+
+
+@router.get("/users/search", response_model=list[UserSearchResult])
+async def search_users(
+    q: str,
+    db: Prisma = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[UserSearchResult]:
+    """Search for users by email prefix (for team invite). Returns up to 10 matches, excluding self."""
+    if len(q) < 2:
+        return []
+    users = await db.user.find_many(
+        where={"email": {"contains": q, "mode": "insensitive"}, "id": {"not": current_user.id}},
+        take=10,
+    )
+    return [UserSearchResult(id=u.id, email=u.email, full_name=u.fullName) for u in users]
+

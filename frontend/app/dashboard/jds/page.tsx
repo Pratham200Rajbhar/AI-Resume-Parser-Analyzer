@@ -57,8 +57,8 @@ export default function JDsPage() {
       setRawText(data.rawText || '')
       setUrlInput('')
       addToast({ title: 'URL imported — review and save', variant: 'default' })
-    } catch (err: any) {
-      setUrlError(err?.response?.data?.detail ?? 'Failed to fetch URL')
+    } catch (err: unknown) {
+      setUrlError((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Failed to fetch URL')
     } finally {
       setUrlLoading(false)
     }
